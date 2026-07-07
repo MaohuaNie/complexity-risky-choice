@@ -1,0 +1,1054 @@
+<!--
+================================================================================
+behavioural_analysis.Rmd — Model-free behavioural analysis and figures
+================================================================================
+Aim:     Reproduces the model-free (non-DDM) behavioural results and figures:
+         complex-choice proportions and response times in the CS condition,
+         risky/EV-consistent choice and RT in the CCSS condition, paired
+         t-tests, and mixed-effects (glmer) EV-sensitivity models. Produces the
+         combined per-study behavioural figures (full_combined_*.pdf).
+
+Inputs:  The three derived per-study data sets. In this package the equivalent
+         data are in ../data/ :
+             number_of_outcome  -> Study 1  (../data/final_df_study1.rds)
+             outcome-as-term    -> Study 2  (../data/final_df_study2.rds)
+             compound_prob      -> Study 3  (../data/final_df_study3.rds)
+         Set `study_paths` (in the "Load data" chunk below) to these files.
+         The RDS files are already pre-processed (skew recoding, response flip,
+         RT in seconds, test-trial filter) — no further pre-processing is done here.
+
+Outputs: full_combined_number_of_outcome.pdf / _outcome-as-term.pdf /
+         _compound_prob.pdf (choice + RT panels per study), plus printed
+         t-tests and model summaries.
+
+Usage:   Open in RStudio and knit, or run chunk by chunk. Requires:
+         dplyr, tidyr, ggplot2, purrr, cowplot, lme4, performance.
+
+Part of the complexity-under-risk replication package (behavioural analysis).
+Pipeline order and dependencies are documented in ../README.md.
+================================================================================
+-->
+```{r}
+# Load required libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(purrr)
+library(cowplot)
+
+# Helper: mean and 95% CI via t.test (returns NA bounds if all values identical)
+calculate_mean_ci <- function(data) {
+  if (length(unique(data)) == 1) {
+    return(list(mean = mean(data), lower = NA, upper = NA))
+  }
+  t_result <- t.test(data)
+  return(list(mean = mean(data), lower = t_result$conf.int[1], upper = t_result$conf.int[2]))
+}
+
+# Helper: paired t-test of (a - b) with effect size and a APA-style
+# significance label. Returns a one-row data frame; replaces the three previous
+# perform_t_test definitions.
+paired_t_test_summary <- function(a, b, study_label) {
+  t_test    <- t.test(a, b, paired = TRUE, alternative = "two.sided")
+  diff      <- a - b
+  mean_diff <- mean(diff, na.rm = TRUE)
+  sd_diff   <- sd(diff, na.rm = TRUE)
+  data.frame(
+    study        = study_label,
+    mean_diff    = mean_diff,
+    t_statistic  = unname(t_test$statistic),
+    df           = unname(t_test$parameter),
+    p_value      = t_test$p.value,
+    ci_lower     = t_test$conf.int[1],
+    ci_upper     = t_test$conf.int[2],
+    cohen_d      = mean_diff / sd_diff,
+    significance = case_when(
+      t_test$p.value < 0.001 ~ "***",
+      t_test$p.value < 0.01  ~ "**",
+      t_test$p.value < 0.05  ~ "*",
+      TRUE                   ~ "ns"
+    )
+  )
+}
+
+# Output directory for all plots produced by this notebook
+dir.create("behavioural_analysis", showWarnings = FALSE)
+
+# --- Load data ---
+# The RDS files use folder-based labels rather than the old "Study 1/2/3" naming.
+# The pre-processing already applied in the RDS files (skew recoding, true_response
+# flip via risk_index, /1000 RT conversion, test-trial filter) is not re-done here.
+study_paths <- c(
+  compound_prob     = "compound_prob/data/derived/final_df_study3.rds",
+  `outcome-as-term` = "outcome-as-term/data/derived/final_df_study2.rds",
+  number_of_outcome = "number_of_outcome/data/derived/final_df_study1.rds"
+)
+study_names <- names(study_paths)
+
+data_compound_prob     <- readRDS(study_paths[["compound_prob"]])
+data_outcome_as_term   <- readRDS(study_paths[["outcome-as-term"]])
+data_number_of_outcome <- readRDS(study_paths[["number_of_outcome"]])
+
+# Choice proportion processing
+process_data_choice <- function(data, condition_label) {
+  cleaned <- data %>%
+    filter(skew_level %in% c('right_vs_left', 'left_vs_right', 'no_skew_vs_no_skew'),
+           test_part %in% c('cs', 'sc')) %>%
+    mutate(cho = ifelse(true_response == 'f', 1, -1),
+           oa_complex = ifelse(test_part == 'cs', 1, -1),
+           EV_diff = EV_diff * oa_complex,
+           choosing_complex = ifelse((oa_complex == 1 & cho == 1) | (oa_complex == -1 & cho == -1), 1, 0)
+    )
+
+  individual <- cleaned %>%
+    group_by(subject) %>%
+    summarise(prop_complex = mean(choosing_complex, na.rm = TRUE)) %>%
+    mutate(condition = condition_label)
+
+  group <- individual %>%
+    summarise(
+      mean_prop_complex = mean(prop_complex),
+      sd_prop_complex = sd(prop_complex),
+      lower = mean(prop_complex) - 1.96 * sd_prop_complex / sqrt(n()),
+      upper = mean(prop_complex) + 1.96 * sd_prop_complex / sqrt(n())
+    ) %>%
+    mutate(condition = condition_label)
+
+  t_result <- t.test(individual$prop_complex, mu = 0.5)
+  group <- group %>%
+    mutate(
+      t_value = t_result$statistic,
+      df = t_result$parameter,
+      p_value = t_result$p.value,
+      ci_lower = t_result$conf.int[1],
+      ci_upper = t_result$conf.int[2],
+      significance = case_when(
+        p_value < 0.001 ~ "***",
+        p_value < 0.01 ~ "**",
+        p_value < 0.05 ~ "*",
+        TRUE ~ "ns"
+      )
+    )
+
+  list(individual = individual, group = group)
+}
+
+data_cp_summary  <- process_data_choice(data_compound_prob,     "compound_prob")
+data_oat_summary <- process_data_choice(data_outcome_as_term,   "outcome-as-term")
+data_no_summary  <- process_data_choice(data_number_of_outcome, "number_of_outcome")
+
+individual_summary <- bind_rows(data_cp_summary$individual, data_oat_summary$individual, data_no_summary$individual)
+group_summary      <- bind_rows(data_cp_summary$group,      data_oat_summary$group,      data_no_summary$group)
+
+# RT processing
+process_data_rt <- function(data, study_label) {
+  cleaned <- data %>%
+    filter(test_part %in% c('cs', 'sc') & skew_level != "catch") %>%
+    mutate(cho = ifelse(true_response == 'f', 1, -1),
+           choosing_complex = ifelse((cho == 1 & test_part == 'cs') | (cho == -1 & test_part == 'sc'), 1, 0)
+    )
+
+  filtered <- cleaned %>%
+    group_by(subject) %>%
+    filter(all(c(0, 1) %in% choosing_complex)) %>%
+    ungroup()
+
+  individual <- filtered %>%
+    group_by(subject, choosing_complex) %>%
+    summarise(median_rt = median(rt), .groups = "drop") %>%
+    pivot_wider(names_from = choosing_complex, values_from = median_rt, names_prefix = "median_rt_") %>%
+    mutate(median_rt_diff = median_rt_1 - median_rt_0,
+           condition = 'Complex vs. Simple',
+           study = study_label)
+
+  summary <- individual %>%
+    summarise(
+      median_complex_rt_diff = calculate_mean_ci(median_rt_diff)$mean,
+      lower = calculate_mean_ci(median_rt_diff)$lower,
+      upper = calculate_mean_ci(median_rt_diff)$upper
+    ) %>%
+    mutate(condition = 'Complex vs. Simple', study = study_label)
+
+  list(individual = individual, summary = summary)
+}
+
+results_cp  <- process_data_rt(data_compound_prob,     "compound_prob")
+results_oat <- process_data_rt(data_outcome_as_term,   "outcome-as-term")
+results_no  <- process_data_rt(data_number_of_outcome, "number_of_outcome")
+
+combined_individual <- bind_rows(results_cp$individual, results_oat$individual, results_no$individual)
+combined_summary    <- bind_rows(results_cp$summary,    results_oat$summary,    results_no$summary)
+
+# Paired t-tests for the CS-condition RT (complex - simple)
+t_test_results <- bind_rows(
+  paired_t_test_summary(results_cp$individual$median_rt_1,  results_cp$individual$median_rt_0,  "compound_prob"),
+  paired_t_test_summary(results_oat$individual$median_rt_1, results_oat$individual$median_rt_0, "outcome-as-term"),
+  paired_t_test_summary(results_no$individual$median_rt_1,  results_no$individual$median_rt_0,  "number_of_outcome")
+) %>%
+  mutate(
+    condition    = "Complex vs. Simple",
+    Mean_Complex = c(mean(results_cp$individual$median_rt_1),
+                     mean(results_oat$individual$median_rt_1),
+                     mean(results_no$individual$median_rt_1)),
+    Mean_Simple  = c(mean(results_cp$individual$median_rt_0),
+                     mean(results_oat$individual$median_rt_0),
+                     mean(results_no$individual$median_rt_0)),
+    sd_Complex   = c(sd(results_cp$individual$median_rt_1),
+                     sd(results_oat$individual$median_rt_1),
+                     sd(results_no$individual$median_rt_1)),
+    sd_Simple    = c(sd(results_cp$individual$median_rt_0),
+                     sd(results_oat$individual$median_rt_0),
+                     sd(results_no$individual$median_rt_0))
+  )
+t_test_results
+```
+
+
+```{r}
+# theme: compact, thin axes, no grid, sans-serif body
+theme_psyrev <- theme_classic(base_size = 10) +
+  theme(
+    text             = element_text(color = "black"),
+    plot.title       = element_text(size = 10, face = "bold", hjust = 0,
+                                    margin = margin(b = 4)),
+    axis.title       = element_text(size = 9.5, color = "black"),
+    axis.text        = element_text(size = 8.5, color = "black"),
+    axis.line        = element_line(linewidth = 0.4, color = "black"),
+    axis.ticks       = element_line(linewidth = 0.4, color = "black"),
+    strip.background = element_rect(fill = "gray92", color = NA),
+    strip.text       = element_text(size = 9.5, face = "bold"),
+    legend.position  = "bottom",
+    legend.title     = element_text(size = 9),
+    legend.text      = element_text(size = 8.5),
+    legend.key.size  = unit(0.35, "cm"),
+    legend.margin    = margin(0, 0, 0, 0),
+    plot.margin      = margin(4, 6, 4, 6)
+  )
+
+# Shared geom constants — keep all panels visually consistent
+sig_text_size <- 2.5     # mm; in-panel asterisks
+point_size    <- 0.7
+point_alpha   <- 0.4     # individual jittered points
+mean_size     <- 1.6     # filled black mean marker on top of the errorbar
+err_w         <- 0.15    # error-bar cap width
+err_lw        <- 0.7     # error-bar linewidth (thick enough to read over the cloud)
+hline_lw      <- 0.3     # reference-line linewidth
+bracket_lw    <- 0.3     # significance-bracket linewidth
+trial_palette <- c(cc = "#298c8c", ss = "#f1a226")
+
+combine_choice_rt_plot <- function(study_name) {
+  group_choice <- group_summary       %>% filter(condition == study_name)
+  ind_choice   <- individual_summary  %>% filter(condition == study_name)
+  group_rt     <- combined_summary    %>% filter(study == study_name)
+  ind_rt       <- combined_individual %>% filter(study == study_name)
+  rt_sig       <- t_test_results      %>% filter(study == study_name)
+
+  plot_choice <- ggplot() +
+    geom_point(data = ind_choice,
+               aes(x = "Complex vs. Simple", y = prop_complex),
+               color = "black", position = position_jitter(width = 0.18),
+               size = point_size, alpha = point_alpha) +
+    geom_errorbar(data = group_choice,
+                  aes(x = "Complex vs. Simple", ymin = lower, ymax = upper),
+                  width = err_w, linewidth = err_lw, color = "black") +
+    geom_point(data = group_choice,
+               aes(x = "Complex vs. Simple", y = mean_prop_complex),
+               size = mean_size, color = "black") +
+    geom_text(data = group_choice,
+              aes(x = "Complex vs. Simple", y = 0.92, label = significance),
+              size = sig_text_size, color = "black") +
+    geom_hline(yintercept = 0.5, linetype = "dashed",
+               color = "gray60", linewidth = hline_lw) +
+    labs(x = NULL, y = "Complex choice proportion") +
+    ggtitle("(a) Complex choice proportion") +
+    theme_psyrev + ylim(0, 1)
+
+  plot_rt <- ggplot() +
+    geom_point(data = ind_rt,
+               aes(x = condition, y = median_rt_diff),
+               color = "black", position = position_jitter(width = 0.18),
+               size = point_size, alpha = point_alpha) +
+    geom_errorbar(data = group_rt,
+                  aes(x = condition, ymin = lower, ymax = upper),
+                  width = err_w, linewidth = err_lw, color = "black") +
+    geom_point(data = group_rt,
+               aes(x = condition, y = median_complex_rt_diff),
+               size = mean_size, color = "black") +
+    geom_text(data = rt_sig,
+              aes(x = condition, y = 4.5, label = significance),
+              size = sig_text_size, color = "black") +
+    geom_hline(yintercept = 0, linetype = "dashed",
+               color = "gray60", linewidth = hline_lw) +
+    labs(x = NULL, y = "RT difference (complex − simple) [s]") +
+    ggtitle("(b) RT difference") +
+    theme_psyrev + ylim(-3, 6)
+
+  list(cs_choice = plot_choice, cs_rt = plot_rt)
+}
+```
+
+### ccss
+
+Two-sided two-sample t test comparing the median participant response time in simple versus simple condition against complex versus complex condition.
+We expect faster response times in simple versus simple condition than in complex versus complex condition.
+
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Function to process and summarize each dataset
+process_response_times <- function(data, study_label) {
+  cleaned_data <- data %>%
+    filter(skew_level %in% c('right_vs_left', 'left_vs_right', 'no_skew_vs_no_skew')) %>%
+    filter(test_part == 'cc' | test_part == 'ss')
+
+  # Calculate median RT per participant for both cc and ss
+  participant_median_rts <- cleaned_data %>%
+    group_by(subject, test_part) %>%
+    dplyr::summarize(median_rt = median(rt, na.rm = TRUE), .groups = "drop")
+
+  # Spread the data to have cc and ss in separate columns for each participant
+  participant_rts_wide <- participant_median_rts %>%
+    pivot_wider(names_from = test_part, values_from = median_rt)
+
+  # Calculate the difference between cc and ss for each participant
+  participant_rts_wide <- participant_rts_wide %>%
+    mutate(rt_difference = cc - ss)
+
+  participant_means <- participant_rts_wide
+
+  # Calculate group-level mean and confidence intervals for the difference
+  mean_rt_group <- participant_means %>%
+    dplyr::summarize(
+      mean_rt_diff = calculate_mean_ci(rt_difference)$mean,
+      lower = calculate_mean_ci(rt_difference)$lower,
+      upper = calculate_mean_ci(rt_difference)$upper,
+      .groups = "drop"
+    ) %>%
+    mutate(study = study_label)
+
+  list(participant_means = participant_means, mean_rt_group = mean_rt_group)
+}
+
+
+```
+
+
+
+```{r}
+# Apply the function to each dataset
+results_rt_cp  <- process_response_times(data_compound_prob,     "compound_prob")
+results_rt_oat <- process_response_times(data_outcome_as_term,   "outcome-as-term")
+results_rt_no  <- process_response_times(data_number_of_outcome, "number_of_outcome")
+
+# Combine the results
+combined_participant_means <- bind_rows(
+  results_rt_cp$participant_means  %>% mutate(study = "compound_prob"),
+  results_rt_oat$participant_means %>% mutate(study = "outcome-as-term"),
+  results_rt_no$participant_means  %>% mutate(study = "number_of_outcome")
+)
+
+combined_mean_rt_group <- bind_rows(
+  results_rt_cp$mean_rt_group,
+  results_rt_oat$mean_rt_group,
+  results_rt_no$mean_rt_group
+)
+
+
+```
+
+
+
+
+```{r}
+# CCSS RT: paired t-test cc vs ss for each study
+t_test_results_rt <- bind_rows(
+  paired_t_test_summary(results_rt_cp$participant_means$cc,  results_rt_cp$participant_means$ss,  "compound_prob"),
+  paired_t_test_summary(results_rt_oat$participant_means$cc, results_rt_oat$participant_means$ss, "outcome-as-term"),
+  paired_t_test_summary(results_rt_no$participant_means$cc,  results_rt_no$participant_means$ss,  "number_of_outcome")
+)
+
+t_test_results_rt
+```
+
+
+
+
+
+The interaction between EV_diff and condition in a generalized linear mixed model with EV_diff and condition as IV and choice as DV
+We expect significant interaction between EV_diff and condition.
+
+
+
+```{r}
+library(lme4)
+library(ggplot2)
+library(dplyr)
+library(performance)  # For R² calculations
+
+# Function to fit the model, generate predictions, and extract important statistics
+process_consistency <- function(data, study_label) {
+  test_consistency <- data %>%
+    filter(skew_level %in% c('right_vs_left', 'left_vs_right', 'no_skew_vs_no_skew')) %>%
+    filter(test_part == 'ss' | test_part == 'cc') %>%
+    mutate(risky = ifelse(true_response == 'f', 1, 0))
+
+  # Fit the multilevel logistic regression model
+  model <- glmer(
+    risky ~ test_part + EV_diff  + test_part * EV_diff + (1 + EV_diff | subject),
+    data = test_consistency,
+    family = binomial(link = "logit"),
+    control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+  )
+
+
+  # Extract model statistics
+  model_summary <- summary(model)
+  coefficients <- as.data.frame(model_summary$coefficients)
+  coefficients$predictor <- rownames(coefficients)
+
+
+
+  # Store model statistics
+  model_stats <- coefficients %>%
+    rename(
+      estimate = Estimate,
+      std_error = `Std. Error`,
+      z_value = `z value`,
+      p_value = `Pr(>|z|)`
+    ) %>%
+    mutate(
+      study = study_label,
+      significance = case_when(
+        p_value < 0.001 ~ "***",
+        p_value < 0.01 ~ "**",
+        p_value < 0.05 ~ "*",
+        TRUE ~ "ns"
+      )
+    ) %>%
+    select(study, predictor, estimate, std_error, z_value, p_value, significance)
+
+
+  # Predict probabilities and compute confidence intervals
+  predictions <- predict(model, newdata = test_consistency, type = "link", se.fit = TRUE, re.form = NA)
+  test_consistency <- test_consistency %>%
+    mutate(
+      predicted_risk = plogis(predictions$fit),
+      lower_ci = plogis(predictions$fit - 1.96 * predictions$se.fit),
+      upper_ci = plogis(predictions$fit + 1.96 * predictions$se.fit),
+      study = study_label
+    )
+
+  list(data = test_consistency, coefficients = model_stats)
+}
+
+# Process all three datasets
+results_cons_cp  <- process_consistency(data_compound_prob,     "compound_prob")
+results_cons_oat <- process_consistency(data_outcome_as_term,   "outcome-as-term")
+results_cons_no  <- process_consistency(data_number_of_outcome, "number_of_outcome")
+
+# Combine all processed datasets
+combined_consistency <- bind_rows(
+  results_cons_cp$data,
+  results_cons_oat$data,
+  results_cons_no$data
+)
+
+# Combine model coefficients summary
+interaction_summary <- bind_rows(
+  results_cons_cp$coefficients,
+  results_cons_oat$coefficients,
+  results_cons_no$coefficients
+)
+
+# Filter interaction_summary to only keep the interaction effect
+interaction_effect_summary <- interaction_summary %>%
+  filter(predictor == "test_partss:EV_diff")
+
+# Display only the interaction effect
+interaction_effect_summary
+
+```
+
+
+
+
+Two-sided two-sample t test comparing participant-level frequency of dominant choices in catch trials in simple versus simple condition against complex versus complex condition.
+We expect more dominant choices in simple versus simple condition than in complex versus complex condition.
+
+
+```{r}
+library(dplyr)
+
+# Define a function to clean and process the data
+process_study_data <- function(data) {
+  cleaned_data <- data %>%
+    select(subject, test_part, true_response, EV_diff, skew_level) %>%
+    filter(skew_level == "catch") %>%
+    mutate(accuracy = case_when(
+      EV_diff > 0 & true_response == 'f' ~ 1,
+      EV_diff < 0 & true_response == 'j' ~ 1,
+      TRUE ~ 0
+    )) %>%
+    mutate(test_part = ifelse(test_part == "sc", "cs", test_part))
+
+  # Calculate mean accuracy grouped by subject and test_part
+  accuracy_summary <- cleaned_data %>%
+    group_by(subject, test_part) %>%
+    summarise(mean_accuracy = mean(accuracy, na.rm = TRUE)) %>%
+    filter(test_part == 'cc' | test_part == 'ss')
+
+  return(accuracy_summary)
+}
+
+# Apply the function to each dataset
+accuracy_compound_prob     <- process_study_data(data_compound_prob)
+accuracy_outcome_as_term   <- process_study_data(data_outcome_as_term)
+accuracy_number_of_outcome <- process_study_data(data_number_of_outcome)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+# Function to summarize accuracy and perform paired t-test
+summarize_accuracy <- function(data) {
+  summary_data <- data %>%
+    group_by(test_part) %>%
+    summarise(
+      mean_mean_accuracy = mean(mean_accuracy, na.rm = TRUE),
+      sd = sd(mean_accuracy, na.rm = TRUE),
+      se = sd(mean_accuracy, na.rm = TRUE) / sqrt(n()),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      lower = mean_mean_accuracy - 1.96 * se,
+      upper = mean_mean_accuracy + 1.96 * se
+    )
+
+  # Perform paired t-test between 'cc' and 'ss' conditions
+  cc_ss_data <- data %>%
+    filter(test_part %in% c("cc", "ss")) %>%
+    pivot_wider(names_from = test_part, values_from = mean_accuracy)
+
+  if (all(c("cc", "ss") %in% colnames(cc_ss_data))) {
+    t_test <- t.test(cc_ss_data$cc, cc_ss_data$ss, paired = TRUE, alternative = "two.sided")
+    t_stat <- t_test$statistic
+    p_value <- t_test$p.value
+    df <-  t_test$parameter
+    significance = case_when(
+        p_value < 0.001 ~ "***",
+        p_value < 0.01 ~ "**",
+        p_value < 0.05 ~ "*",
+        TRUE ~ "ns"
+      )
+
+  } else {
+    t_stat <- NA
+    p_value <- NA
+  }
+
+  summary_data <- summary_data %>%
+    mutate(t_statistic = t_stat, p_value = p_value, df = df, significance = significance)
+
+  return(summary_data)
+}
+
+# Compute final summary tables
+summary_df_cp  <- summarize_accuracy(accuracy_compound_prob)
+summary_df_oat <- summarize_accuracy(accuracy_outcome_as_term)
+summary_df_no  <- summarize_accuracy(accuracy_number_of_outcome)
+
+
+```
+
+
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Function to process each dataset
+process_catch_choices <- function(data, study_label) {
+  test_catch <- data %>%
+    filter(skew_level == 'catch') %>%
+    filter(test_part == 'ss' | test_part == 'cc') %>%
+    mutate(accuracy = case_when(
+      EV_diff > 0 & true_response == 'f' ~ 1,
+      EV_diff < 0 & true_response == 'j' ~ 1,
+      TRUE ~ 0
+    ))
+
+  catch_results <- test_catch %>%
+    group_by(subject, test_part) %>%
+    dplyr::summarize(mean_accuracy = calculate_mean_ci(accuracy)$mean) %>%
+    group_by(subject) %>%
+    filter(all(c("cc", "ss") %in% test_part)) %>%
+    ungroup()
+
+
+  catch_results_pool <- catch_results %>%
+    group_by(test_part) %>%
+    dplyr::summarize(mean_accuracy_group = calculate_mean_ci(mean_accuracy)$mean,
+              lower = calculate_mean_ci(mean_accuracy)$lower,
+              upper = calculate_mean_ci(mean_accuracy)$upper, .groups = "drop") %>%
+    mutate(study = study_label)
+
+  catch_results_pivot <- catch_results %>%
+    pivot_wider(names_from = test_part, values_from = mean_accuracy, names_prefix = "mean_accuracy_")
+
+  list(catch_results = catch_results, catch_results_pool = catch_results_pool)
+}
+
+# Process all three datasets
+catch_results_compound_prob     <- process_catch_choices(data_compound_prob,     "compound_prob")
+catch_results_outcome_as_term   <- process_catch_choices(data_outcome_as_term,   "outcome-as-term")
+catch_results_number_of_outcome <- process_catch_choices(data_number_of_outcome, "number_of_outcome")
+```
+
+
+
+
+
+
+
+
+```{r}
+# Catch-trial CC vs SS paired t-tests, using the unified helper.
+catch_to_t <- function(catch_results, study_label) {
+  cc <- catch_results %>% filter(test_part == "cc") %>% pull(mean_accuracy)
+  ss <- catch_results %>% filter(test_part == "ss") %>% pull(mean_accuracy)
+  paired_t_test_summary(cc, ss, study_label)
+}
+
+t_test_results_catch <- bind_rows(
+  catch_to_t(catch_results_compound_prob$catch_results,     "compound_prob"),
+  catch_to_t(catch_results_outcome_as_term$catch_results,   "outcome-as-term"),
+  catch_to_t(catch_results_number_of_outcome$catch_results, "number_of_outcome")
+)
+
+# Combine results
+combined_catch_results_pool <- bind_rows(
+  catch_results_compound_prob$catch_results_pool,
+  catch_results_outcome_as_term$catch_results_pool,
+  catch_results_number_of_outcome$catch_results_pool
+)
+
+
+```
+
+
+
+
+
+
+
+Two-sided paired t test comparing participant-level frequency of risky choices in simple versus simple condition against complex versus complex condition.
+
+
+
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Function to process each dataset
+process_risky_choices <- function(data, study_label) {
+  test_risky <- data %>%
+    filter(skew_level %in% c('right_vs_left', 'left_vs_right', 'no_skew_vs_no_skew')) %>%
+    filter(test_part == 'ss' | test_part == 'cc') %>%
+    mutate(risky_response = ifelse(true_response == 'f', 1, 0))
+
+  risky_results <- test_risky %>%
+    group_by(subject, test_part) %>%
+    dplyr::summarize(mean_risky = calculate_mean_ci(risky_response)$mean,
+              lower = calculate_mean_ci(risky_response)$lower,
+              upper = calculate_mean_ci(risky_response)$upper, .groups = "drop") %>%
+    mutate(study = study_label)
+
+  risky_results_pool <- risky_results %>%
+    group_by(test_part) %>%
+    dplyr::summarize(mean_risky_group = calculate_mean_ci(mean_risky)$mean,
+                     sd_risky_group = sd(mean_risky),
+              lower = calculate_mean_ci(mean_risky)$lower,
+              upper = calculate_mean_ci(mean_risky)$upper, .groups = "drop") %>%
+    mutate(study = study_label)
+
+  list(risky_results = risky_results, risky_results_pool = risky_results_pool)
+}
+
+# Process all three datasets
+results_risky_cp  <- process_risky_choices(data_compound_prob,     "compound_prob")
+results_risky_oat <- process_risky_choices(data_outcome_as_term,   "outcome-as-term")
+results_risky_no  <- process_risky_choices(data_number_of_outcome, "number_of_outcome")
+
+
+# Combine results
+combined_risky_results_individual <- bind_rows(
+  results_risky_cp$risky_results,
+  results_risky_oat$risky_results,
+  results_risky_no$risky_results
+)
+
+
+
+# Combine results
+combined_risky_results_pool <- bind_rows(
+  results_risky_cp$risky_results_pool,
+  results_risky_oat$risky_results_pool,
+  results_risky_no$risky_results_pool
+)
+
+# Risky-choice CC vs SS paired t-tests, using the unified helper.
+risky_to_t <- function(risky_results, study_label) {
+  cc <- risky_results %>% filter(test_part == "cc") %>% pull(mean_risky)
+  ss <- risky_results %>% filter(test_part == "ss") %>% pull(mean_risky)
+  paired_t_test_summary(cc, ss, study_label)
+}
+
+t_test_results_risky <- bind_rows(
+  risky_to_t(results_risky_cp$risky_results,  "compound_prob"),
+  risky_to_t(results_risky_oat$risky_results, "outcome-as-term"),
+  risky_to_t(results_risky_no$risky_results,  "number_of_outcome")
+)
+```
+
+
+
+
+
+
+
+Two-sample paired t test comparing participant-level frequency of choosing right skewed lotteries in simple versus simple condition against complex versus complex condition.
+
+
+
+```{r}
+library(dplyr)
+library(purrr)
+library(ggplot2)
+
+# Function to process data for one study and conduct detailed t-tests
+process_and_ttest <- function(data, study_label) {
+  test2 <- data %>%
+    filter(skew_level %in% c('right_vs_left', 'left_vs_right')) %>%
+    filter(test_part %in% c('cc', 'ss')) %>%
+    group_by(subject) %>%
+    mutate(choosing_right = ifelse(
+      (skew_level == 'left_vs_right' & true_response == 'j') |
+      (skew_level == 'right_vs_left' & true_response == 'f'), 1, 0
+    ))
+
+  # Summarize proportion of right choices
+  right_choice <- test2 %>%
+    group_by(subject, test_part) %>%
+    summarise(prop_right = mean(choosing_right, na.rm = TRUE), .groups = "drop") %>%
+    mutate(study = study_label)
+
+  # Perform paired t-tests for `cc` vs `ss`
+  t_test_results <- right_choice %>%
+    filter(test_part %in% c("cc", "ss")) %>%
+    summarise(
+      t_test = list(t.test(
+        prop_right[test_part == "cc"],
+        prop_right[test_part == "ss"],
+        paired = TRUE
+      )),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      study = study_label,
+      t_value = map_dbl(t_test, ~ .x$statistic),
+      df = map_dbl(t_test, ~ .x$parameter),
+      p_value = map_dbl(t_test, ~ .x$p.value),
+      conf_lower = map_dbl(t_test, ~ .x$conf.int[1]),
+      conf_upper = map_dbl(t_test, ~ .x$conf.int[2]),
+      significance = case_when(
+        p_value < 0.001 ~ "***",
+        p_value < 0.01 ~ "**",
+        p_value < 0.05 ~ "*",
+        TRUE ~ "ns"
+      )
+    ) %>%
+    select(study, t_value, df, p_value, conf_lower, conf_upper,  significance)
+
+  # Calculate group-level means and confidence intervals
+  summary_df <- right_choice %>%
+    group_by(test_part) %>%
+    summarise(
+      mean_prop = calculate_mean_ci(prop_right)$mean,
+      sd_prop = sd(prop_right),
+      lower = calculate_mean_ci(prop_right)$lower,
+      upper = calculate_mean_ci(prop_right)$upper,
+      .groups = "drop"
+    ) %>%
+    mutate(study = study_label)
+
+  list(right_choice = right_choice, summary_df = summary_df, t_test_results = t_test_results)
+}
+
+# Process all datasets
+results_skew_cp  <- process_and_ttest(data_compound_prob,     "compound_prob")
+results_skew_oat <- process_and_ttest(data_outcome_as_term,   "outcome-as-term")
+results_skew_no  <- process_and_ttest(data_number_of_outcome, "number_of_outcome")
+
+
+
+# Combine results
+combined_skew_results_individual <- bind_rows(
+  results_skew_cp$right_choice,
+  results_skew_oat$right_choice,
+  results_skew_no$right_choice
+)
+
+
+
+# Combine summaries and t-test results for plotting
+combined_summary_skew <- bind_rows(
+  results_skew_cp$summary_df,
+  results_skew_oat$summary_df,
+  results_skew_no$summary_df
+)
+
+combined_ttests_skew <- bind_rows(
+  results_skew_cp$t_test_results,
+  results_skew_oat$t_test_results,
+  results_skew_no$t_test_results
+)
+
+
+```
+
+
+
+
+
+```{r}
+library(cowplot)
+
+# Lookup table from study label to its catch_results object (avoids dynamic
+# get() with non-syntactic names like "outcome-as-term").
+catch_results_by_study <- list(
+  compound_prob     = catch_results_compound_prob,
+  `outcome-as-term` = catch_results_outcome_as_term,
+  number_of_outcome = catch_results_number_of_outcome
+)
+
+generate_combined_study_plot <- function(study_name) {
+  # --- RT difference (CC - SS) ---
+  plot_mean_rt_group <- combined_mean_rt_group %>% filter(study == study_name)
+  plot_individual_rt <- combined_participant_means %>% filter(study == study_name) %>%
+    mutate(median_rt_diff = cc - ss)
+  plot_t_test_rt <- t_test_results_rt %>% filter(study == study_name)
+
+  plot_rt_diff <- ggplot() +
+    geom_point(data = plot_individual_rt,
+               aes(x = "CC vs. SS", y = median_rt_diff),
+               position = position_jitter(width = 0.18),
+               size = point_size, alpha = point_alpha, color = "black") +
+    geom_errorbar(data = plot_mean_rt_group,
+                  aes(x = "CC vs. SS", ymin = lower, ymax = upper),
+                  width = err_w, linewidth = err_lw, color = "black") +
+    geom_point(data = plot_mean_rt_group,
+               aes(x = "CC vs. SS", y = mean_rt_diff),
+               size = mean_size, color = "black") +
+    geom_text(data = plot_t_test_rt,
+              aes(x = "CC vs. SS", y = 4.5, label = significance),
+              size = sig_text_size, color = "black") +
+    geom_hline(yintercept = 0, linetype = "dashed",
+               color = "gray60", linewidth = hline_lw) +
+    labs(x = NULL, y = "RT difference (CC − SS) [s]") +
+    ylim(-2, 5) +
+    ggtitle("(c) RT difference") +
+    theme_psyrev
+
+  # --- EV consistency (model-based) ---
+  plot_data_consistency <- combined_consistency %>% filter(study == study_name)
+  interaction_study <- interaction_effect_summary %>% filter(study == study_name)
+
+  plot_consistency <- ggplot(plot_data_consistency,
+                             aes(x = EV_diff, y = predicted_risk, color = test_part)) +
+    geom_line(linewidth = 0.7) +
+    geom_ribbon(aes(ymin = lower_ci, ymax = upper_ci, fill = test_part),
+                alpha = 0.25, color = NA) +
+    geom_text(data = interaction_study,
+              aes(x = Inf, y = 0.05, label = significance),
+              inherit.aes = FALSE, size = sig_text_size, hjust = 1.4, vjust = 0) +
+    labs(x = expression(EV[diff]), y = "P(choose A)",
+         color = "Trial type", fill = "Trial type") +
+    scale_color_manual(values = trial_palette, labels = c(cc = "CC", ss = "SS")) +
+    scale_fill_manual(values  = trial_palette, labels = c(cc = "CC", ss = "SS")) +
+    ggtitle("(d) EV consistency") +
+    theme_psyrev
+
+  # --- Catch-trial accuracy ---
+  plot_data_catch <- combined_catch_results_pool %>% filter(study == study_name)
+  t_test_catch <- t_test_results_catch %>% filter(study == study_name)
+  plot_individual_catch <- catch_results_by_study[[study_name]]$catch_results
+
+  plot_catch <- ggplot() +
+    geom_point(data = plot_individual_catch,
+               aes(x = test_part, y = mean_accuracy, color = test_part),
+               position = position_jitter(width = 0.18),
+               size = point_size, alpha = point_alpha) +
+    geom_errorbar(data = plot_data_catch,
+                  aes(x = test_part, ymin = lower, ymax = upper),
+                  width = err_w, linewidth = err_lw, color = "black") +
+    geom_point(data = plot_data_catch,
+               aes(x = test_part, y = mean_accuracy_group),
+               size = mean_size, color = "black") +
+    geom_segment(aes(x = 1, xend = 2, y = 1.07, yend = 1.07),
+                 color = "gray30", linewidth = bracket_lw) +
+    geom_text(data = t_test_catch,
+              aes(x = 1.5, y = 1.11, label = significance),
+              size = sig_text_size, color = "black") +
+    geom_hline(yintercept = 0.5, linetype = "dashed",
+               color = "gray60", linewidth = hline_lw) +
+    labs(x = "Trial type", y = "Accuracy", color = "Trial type") +
+    scale_x_discrete(labels = c(cc = "CC", ss = "SS")) +
+    scale_color_manual(values = trial_palette, labels = c(cc = "CC", ss = "SS")) +
+    coord_cartesian(ylim = c(0.3, 1.15)) +
+    ggtitle("(e) Dominance accuracy") +
+    theme_psyrev
+
+  # --- Risky-choice proportion ---
+  plot_individual <- combined_risky_results_individual %>% filter(study == study_name)
+  plot_summary_risky <- combined_risky_results_pool %>% filter(study == study_name)
+  plot_t_test_risky <- t_test_results_risky %>% filter(study == study_name)
+
+  plot_risky <- ggplot() +
+    geom_point(data = plot_individual,
+               aes(x = test_part, y = mean_risky, color = test_part),
+               position = position_jitter(width = 0.18),
+               size = point_size, alpha = point_alpha) +
+    geom_errorbar(data = plot_summary_risky,
+                  aes(x = test_part, ymin = lower, ymax = upper),
+                  width = err_w, linewidth = err_lw, color = "black") +
+    geom_point(data = plot_summary_risky,
+               aes(x = test_part, y = mean_risky_group),
+               size = mean_size, color = "black") +
+    geom_segment(aes(x = 1, xend = 2, y = 0.83, yend = 0.83),
+                 color = "gray30", linewidth = bracket_lw) +
+    geom_text(data = plot_t_test_risky,
+              aes(x = 1.5, y = 0.86, label = significance),
+              size = sig_text_size, color = "black") +
+    geom_hline(yintercept = 0.5, linetype = "dashed",
+               color = "gray60", linewidth = hline_lw) +
+    labs(x = "Trial type", y = "Risky-choice proportion", color = "Trial type") +
+    scale_x_discrete(labels = c(cc = "CC", ss = "SS")) +
+    scale_color_manual(values = trial_palette, labels = c(cc = "CC", ss = "SS")) +
+    coord_cartesian(ylim = c(0.2, 0.9)) +
+    ggtitle("(f) Risky-choice difference") +
+    theme_psyrev
+
+  # --- Skewness preference ---
+  plot_individual_skew <- combined_skew_results_individual %>% filter(study == study_name)
+  plot_summary_skew <- combined_summary_skew %>% filter(study == study_name)
+  plot_t_test_skew <- combined_ttests_skew %>% filter(study == study_name)
+
+  plot_skew <- ggplot() +
+    geom_point(data = plot_individual_skew,
+               aes(x = test_part, y = prop_right, color = test_part),
+               position = position_jitter(width = 0.18),
+               size = point_size, alpha = point_alpha) +
+    geom_errorbar(data = plot_summary_skew,
+                  aes(x = test_part, ymin = lower, ymax = upper),
+                  width = err_w, linewidth = err_lw, color = "black") +
+    geom_point(data = plot_summary_skew,
+               aes(x = test_part, y = mean_prop),
+               size = mean_size, color = "black") +
+    geom_segment(aes(x = 1, xend = 2, y = 1.07, yend = 1.07),
+                 color = "gray30", linewidth = bracket_lw) +
+    geom_text(data = plot_t_test_skew,
+              aes(x = 1.5, y = 1.11, label = significance),
+              size = sig_text_size, color = "black") +
+    geom_hline(yintercept = 0.5, linetype = "dashed",
+               color = "gray60", linewidth = hline_lw) +
+    labs(x = "Trial type", y = "Right-skewed choice proportion", color = "Trial type") +
+    scale_x_discrete(labels = c(cc = "CC", ss = "SS")) +
+    scale_color_manual(values = trial_palette, labels = c(cc = "CC", ss = "SS")) +
+    coord_cartesian(ylim = c(0.2, 1.15)) +
+    ggtitle("(g) Skewness preference") +
+    theme_psyrev
+
+  list(
+    rt_diff     = plot_rt_diff,
+    consistency = plot_consistency,
+    catch       = plot_catch,
+    risky       = plot_risky,
+    skew        = plot_skew
+  )
+}
+```
+
+
+
+
+```{r}
+generate_all_subplots <- function(study_name) {
+  plot_cs    <- combine_choice_rt_plot(study_name)
+  ccss_plots <- generate_combined_study_plot(study_name)
+
+  drop_legend <- theme(legend.position = "none")
+  plot_a <- plot_cs$cs_choice + drop_legend
+  plot_b <- plot_cs$cs_rt     + drop_legend
+  plot_c <- ccss_plots$rt_diff     + drop_legend
+  plot_d <- ccss_plots$consistency + drop_legend
+  plot_e <- ccss_plots$catch       + drop_legend
+  plot_f <- ccss_plots$risky       + drop_legend
+  plot_g <- ccss_plots$skew        + drop_legend
+
+  shared_legend <- cowplot::get_legend(
+    ccss_plots$skew + theme(legend.position = "bottom")
+  )
+
+  # Section dividers
+  cs_title   <- ggdraw() + draw_label("CS condition",
+                                      fontface = "bold", size = 12,
+                                      x = 0.02, hjust = 0)
+  ccss_title <- ggdraw() + draw_label("CCSS condition",
+                                      fontface = "bold", size = 12,
+                                      x = 0.02, hjust = 0)
+
+  # CS row: (a) (b)  — panel letters baked into each plot's ggtitle
+  cs_row <- cowplot::plot_grid(plot_a, plot_b, NULL, ncol = 3)
+
+  # CCSS rows: (c)(d)(e) and (f)(g)
+  row2 <- cowplot::plot_grid(plot_c, plot_d, plot_e, ncol = 3)
+  row3 <- cowplot::plot_grid(plot_f, plot_g, NULL,   ncol = 3)
+  ccss_body <- cowplot::plot_grid(row2, row3, ncol = 1, rel_heights = c(1, 1))
+
+  final_plot <- cowplot::plot_grid(
+    cs_title, cs_row,
+    ccss_title, ccss_body,
+    shared_legend,
+    ncol = 1,
+    rel_heights = c(0.10, 1, 0.10, 2, 0.12)
+  )
+
+  ggsave(
+    filename = paste0("behavioural_analysis/full_combined_", study_name, ".pdf"),
+    plot     = final_plot,
+    width    = 17, height = 18, units = "cm",
+    dpi      = 600,
+    device   = "pdf"
+  )
+}
+
+lapply(study_names, generate_all_subplots)
+```
+

@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--
+    ==========================================================================
+    Study 1 — online experiment (7-outcome lottery task)
+    ==========================================================================
+    Aim:      The browser-based experiment that collected Study 1 (the
+              "number of outcomes" complexity manipulation: a 7-outcome vs. a
+              2-outcome lottery). Built with jsPsych 7.3.3 and deployed through
+              the JATOS server. This is the data-collection stage; its output
+              feeds the analysis pipeline (../data/final_df_study1.rds).
+
+    Framework: jsPsych 7.3.3 (+ jQuery). JATOS integration via `jatos.js`
+              (addAbortButton, submitResultData, endStudy). Trial data are
+              submitted to JATOS as CSV at the end.
+
+    Timeline (defined below, in order):
+      1. Preload of all lottery/instruction images.
+      2. Browser check + fullscreen + consent.
+      3. Instructions and worked examples (7-outcome and 2-outcome lotteries,
+         outcome/probability/bonus explanation).
+      4. Comprehension quizzes — each loops until the participant answers
+         correctly (correctResponseIndex / incorrectLoop logic).
+      5. Main lottery-choice trials: CS trials (complex vs. simple option) and
+         CCSS trials (both complex or both simple), with per-trial feedback and
+         reaction-time recording; blocks separated by break messages.
+      6. Post-task questionnaires and cognitive-ability items.
+      7. Debrief, then data submission to JATOS.
+
+    Assets NOT bundled here (they live in the JATOS study-assets folder next to
+    this file): `jatos.js`; the local plugins under `dist/`; and the image
+    stimuli under `ques_prac/` and the main-trial image folders. Import this
+    file together with those assets as a JATOS study to run it.
+
+    Part of the complexity-under-risk replication package (experiment /
+    data-collection stage). See ../README.md. Studies 2 and 3 use essentially
+    the same experiment code — only the stimuli (lottery displays) differ
+    (arithmetic-expression and compound-probability manipulations) — so they are
+    not reproduced separately; this file documents the construction for all three.
+    ==========================================================================
+    -->
+    <title>Study 1 — Complexity &amp; Risky Choice (7-outcome lottery task)</title>
+    <script src="jatos.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/jspsych@7.3.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2"></script>
+    <script src="dist/plugin-external-html.js"></script>
+    <script src="dist/plugin-instructions.js"></script>
+    <script src="dist/plugin-survey-html-form.js"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-browser-check@1.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-multi-choice@1.1.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.2"></script>
+    
+
+    <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body></body>
+  <script>
+
+
+
+
+
+    var jsPsych = initJsPsych({
+        on_trial_start: jatos.addAbortButton,
+        show_progress_bar: false,
+        on_finish: () => jatos.endStudy(jsPsych.data.get().json()) 
+    });
+
+    /* create timeline */
+    var timeline = [];
+
+
+    
+
+
+    var preload = {
+    type: jsPsychPreload,
+    images: [
+    'ques_prac/Example1_Sol_1br.png', 'ques_prac/Example1_Sol_2r.png',
+    'ques_prac/Example1_Sol_3r.png', 'ques_prac/Example1_Sol_4r.png',
+    'ques_prac/Example1_Sol_5r.png', 'ques_prac/Example1_Sol_6r.png',
+    'ques_prac/Example1ar.png', 'ques_prac/Example1br.png',
+    'ques_prac/Example2_Sol_1r.png', 'ques_prac/Example2_Sol_2r.png',
+    'ques_prac/Example2_Sol_3r.png', 'ques_prac/Example2_Sol_4br.png',
+    'ques_prac/Example2_Sol_5r.png', 'ques_prac/Example2_Sol_6r.png',
+    'ques_prac/Example2r.png', 
+
+
+    'ques_prac/M01_Sol_1r.png', 'ques_prac/M01_Sol_2r.png',
+    'ques_prac/M01_Sol_3r.png', 'ques_prac/M01_Sol_4r.png',
+    'ques_prac/M01_Sol_5r.png', 'ques_prac/M01_Sol_6r.png','ques_prac/M01r.png',
+
+    'ques_prac/M02_Sol_1r.png', 'ques_prac/M02_Sol_2r.png',
+    'ques_prac/M02_Sol_3r.png', 'ques_prac/M02_Sol_4r.png',
+    'ques_prac/M02_Sol_5r.png', 'ques_prac/M02_Sol_6r.png','ques_prac/M02r.png',
+
+    'ques_prac/M03_Sol_1r.png', 'ques_prac/M03_Sol_2r.png',
+    'ques_prac/M03_Sol_3r.png', 'ques_prac/M03_Sol_4r.png',
+    'ques_prac/M03_Sol_5r.png', 'ques_prac/M03_Sol_6r.png','ques_prac/M03r.png',
+
+    'ques_prac/M05_Sol_1r.png', 'ques_prac/M05_Sol_2r.png',
+    'ques_prac/M05_Sol_3r.png', 'ques_prac/M05_Sol_4r.png',
+    'ques_prac/M05_Sol_5r.png', 'ques_prac/M05_Sol_6r.png','ques_prac/M05r.png',
+
+    'ques_prac/M07_Sol_1r.png', 'ques_prac/M07_Sol_2r.png',
+    'ques_prac/M07_Sol_3r.png', 'ques_prac/M07_Sol_4r.png',
+    'ques_prac/M07_Sol_5r.png', 'ques_prac/M07_Sol_6r.png','ques_prac/M07r.png',
+
+    'ques_prac/M09_Sol_1r.png', 'ques_prac/M09_Sol_2r.png',
+    'ques_prac/M09_Sol_3r.png', 'ques_prac/M09_Sol_4r.png',
+    'ques_prac/M09_Sol_5r.png', 'ques_prac/M09_Sol_6r.png','ques_prac/M09r.png',
+    'ins_prac/simple0.png', 'ins_prac/compound0.png',
+    'ins_prac/simple1.png', 'ins_prac/compound1.png',
+    'ins_prac/simple2.png', 'ins_prac/compound2.png',
+    'ins_prac/simple3.png', 'ins_prac/compound3.png',
+    'ins_prac/simple4.png', 'ins_prac/compound4.png',
+    'png/1_optionA_complex.png', 'png/1_optionA_simple.png', 'png/1_optionB_complex.png', 'png/1_optionB_simple.png', 
+    'png/2_optionA_complex.png', 'png/2_optionA_simple.png', 'png/2_optionB_complex.png', 'png/2_optionB_simple.png', 
+    'png/3_optionA_complex.png', 'png/3_optionA_simple.png', 'png/3_optionB_complex.png', 'png/3_optionB_simple.png', 
+    'png/4_optionA_complex.png', 'png/4_optionA_simple.png', 'png/4_optionB_complex.png', 'png/4_optionB_simple.png', 
+    'png/5_optionA_complex.png', 'png/5_optionA_simple.png', 'png/5_optionB_complex.png', 'png/5_optionB_simple.png', 
+    'png/6_optionA_complex.png', 'png/6_optionA_simple.png', 'png/6_optionB_complex.png', 'png/6_optionB_simple.png', 
+    'png/7_optionA_complex.png', 'png/7_optionA_simple.png', 'png/7_optionB_complex.png', 'png/7_optionB_simple.png', 
+    'png/8_optionA_complex.png', 'png/8_optionA_simple.png', 'png/8_optionB_complex.png', 'png/8_optionB_simple.png', 
+    'png/9_optionA_complex.png', 'png/9_optionA_simple.png', 'png/9_optionB_complex.png', 'png/9_optionB_simple.png', 
+    'png/10_optionA_complex.png', 'png/10_optionA_simple.png', 'png/10_optionB_complex.png', 'png/10_optionB_simple.png', 
+    'png/11_optionA_complex.png', 'png/11_optionA_simple.png', 'png/11_optionB_complex.png', 'png/11_optionB_simple.png', 
+    'png/12_optionA_complex.png', 'png/12_optionA_simple.png', 'png/12_optionB_complex.png', 'png/12_optionB_simple.png', 'png/13_optionA_complex.png', 'png/13_optionA_simple.png', 'png/13_optionB_complex.png', 'png/13_optionB_simple.png', 'png/14_optionA_complex.png', 'png/14_optionA_simple.png', 'png/14_optionB_complex.png', 'png/14_optionB_simple.png', 'png/15_optionA_complex.png', 'png/15_optionA_simple.png', 'png/15_optionB_complex.png', 'png/15_optionB_simple.png', 'png/16_optionA_complex.png', 'png/16_optionA_simple.png', 'png/16_optionB_complex.png', 'png/16_optionB_simple.png', 'png/17_optionA_complex.png', 'png/17_optionA_simple.png', 'png/17_optionB_complex.png', 'png/17_optionB_simple.png', 'png/18_optionA_complex.png', 'png/18_optionA_simple.png', 'png/18_optionB_complex.png', 'png/18_optionB_simple.png', 'png/19_optionA_complex.png', 'png/19_optionA_simple.png', 'png/19_optionB_complex.png', 'png/19_optionB_simple.png', 'png/20_optionA_complex.png', 'png/20_optionA_simple.png', 'png/20_optionB_complex.png', 'png/20_optionB_simple.png', 'png/21_optionA_complex.png', 'png/21_optionA_simple.png', 'png/21_optionB_complex.png', 'png/21_optionB_simple.png', 'png/22_optionA_complex.png', 'png/22_optionA_simple.png', 'png/22_optionB_complex.png', 'png/22_optionB_simple.png', 'png/23_optionA_complex.png', 'png/23_optionA_simple.png', 'png/23_optionB_complex.png', 'png/23_optionB_simple.png', 'png/24_optionA_complex.png', 'png/24_optionA_simple.png', 'png/24_optionB_complex.png', 'png/24_optionB_simple.png', 'png/25_optionA_complex.png', 'png/25_optionA_simple.png', 'png/25_optionB_complex.png', 'png/25_optionB_simple.png', 'png/26_optionA_complex.png', 'png/26_optionA_simple.png', 'png/26_optionB_complex.png', 'png/26_optionB_simple.png', 'png/27_optionA_complex.png', 'png/27_optionA_simple.png', 'png/27_optionB_complex.png', 'png/27_optionB_simple.png', 'png/28_optionA_complex.png', 'png/28_optionA_simple.png', 'png/28_optionB_complex.png', 'png/28_optionB_simple.png', 'png/29_optionA_complex.png', 'png/29_optionA_simple.png', 'png/29_optionB_complex.png', 'png/29_optionB_simple.png', 'png/30_optionA_complex.png', 'png/30_optionA_simple.png', 'png/30_optionB_complex.png', 'png/30_optionB_simple.png', 'png/31_optionA_complex.png', 'png/31_optionA_simple.png', 'png/31_optionB_complex.png', 'png/31_optionB_simple.png', 'png/32_optionA_complex.png', 'png/32_optionA_simple.png', 'png/32_optionB_complex.png', 'png/32_optionB_simple.png', 'png/33_optionA_complex.png', 'png/33_optionA_simple.png', 'png/33_optionB_complex.png', 'png/33_optionB_simple.png', 'png/34_optionA_complex.png', 'png/34_optionA_simple.png', 'png/34_optionB_complex.png', 'png/34_optionB_simple.png', 'png/35_optionA_complex.png', 'png/35_optionA_simple.png', 'png/35_optionB_complex.png', 'png/35_optionB_simple.png', 'png/36_optionA_complex.png', 'png/36_optionA_simple.png', 'png/36_optionB_complex.png', 'png/36_optionB_simple.png', 'png/37_optionA_complex.png', 'png/37_optionA_simple.png', 'png/37_optionB_complex.png', 'png/37_optionB_simple.png', 'png/38_optionA_complex.png', 'png/38_optionA_simple.png', 'png/38_optionB_complex.png', 'png/38_optionB_simple.png', 'png/39_optionA_complex.png', 'png/39_optionA_simple.png', 'png/39_optionB_complex.png', 'png/39_optionB_simple.png', 'png/40_optionA_complex.png', 'png/40_optionA_simple.png', 'png/40_optionB_complex.png', 'png/40_optionB_simple.png', 'png/41_optionA_complex.png', 'png/41_optionA_simple.png', 'png/41_optionB_complex.png', 'png/41_optionB_simple.png', 'png/42_optionA_complex.png', 'png/42_optionA_simple.png', 'png/42_optionB_complex.png', 'png/42_optionB_simple.png', 'png/43_optionA_complex.png', 'png/43_optionA_simple.png', 'png/43_optionB_complex.png', 'png/43_optionB_simple.png', 'png/44_optionA_complex.png', 'png/44_optionA_simple.png', 'png/44_optionB_complex.png', 'png/44_optionB_simple.png', 'png/45_optionA_complex.png', 'png/45_optionA_simple.png', 'png/45_optionB_complex.png', 'png/45_optionB_simple.png',
+    'png/1_optionA_complex_ct.png','png/1_optionA_simple_ct.png','png/1_optionB_complex_ct.png','png/1_optionB_simple_ct.png',
+    'png/2_optionA_complex_ct.png','png/2_optionA_simple_ct.png','png/2_optionB_complex_ct.png','png/2_optionB_simple_ct.png',
+    'png/3_optionA_complex_ct.png','png/3_optionA_simple_ct.png','png/3_optionB_complex_ct.png','png/3_optionB_simple_ct.png',
+    'png/4_optionA_complex_ct.png','png/4_optionA_simple_ct.png','png/4_optionB_complex_ct.png','png/4_optionB_simple_ct.png'
+
+
+
+]
+    }
+
+    
+    
+    var subject_id = jsPsych.randomization.randomID(8);
+    
+    jsPsych.data.addProperties({start_time: Date.now(),
+        subject: subject_id,
+    });
+    
+
+    var enter_fullscreen = {
+        type: jsPsychFullscreen,
+        fullscreen_mode: true
+        }
+
+    
+    
+    var welcome = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `Welcome to the experiment. Press any key to begin. 
+        The images will be loaded next. Please wait for the loading to finish.`
+        };
+    
+    var resolutioncheck = {
+        type: jsPsychBrowserCheck
+    };
+
+    timeline.push(welcome);
+    timeline.push(preload)
+    timeline.push(enter_fullscreen);
+    timeline.push(resolutioncheck);
+
+ 
+    var consent_html = '<div style="border: 1px solid #ccc; padding: 20px; border-radius: 10px; background-color: #d7d7d7; width: 90%; margin: 0 auto; font-size: 15px; text-align: left;">'+
+        '<h1>Consent Form</h1>'+
+        '<p>Dear Madam or Sir,</p>'+
+        '<p>You are being invited to participate in a research study conducted by Maohua Nie, a doctoral student in the Economic Psychology Department at the University of Basel. The purpose of this study is to investigate decision making, which will involve making decisions between various options.</p>'+
+        '<p>This study will last about 45 to 60 minutes, if you successfully complete the study, you will receive 8 £. In addition, you will have the chance to win a bonus payment (around 2 £) based on your choices maded in the experiment.</p>'+
+        '<p>Participation in this study is voluntary. You may refuse to participate or withdraw from the study at any time during the study without penalty or loss of benefits to which you are otherwise entitled. However, once the study is completed, it will not be possible to withdraw their data. If you decide to withdraw from the study, your data will be removed from the study and no further information will be collected from you.</p>'+
+        '<p>You should be fluent in English to complete this study. Also, you must be between 18 to 60 years old. During the study, several quality checks will be included and you may only finish the study when your responses are correct. When you fails to do so, you will be discontinued and reimbursed for your time. However, the bonus payment will be given only when you complete the study. Your data will be securely deleted and not available to anyone in case of discontinuation.</p>'+
+        '<p>The study will not cause any unpleasant experiences or risks to your health or well-being. However, if any unforeseen adverse events occur during the study, you can discontinue participation to ensure your safety and well-being at any time.</p>'+
+        '<p>Your privacy is important to us. All information collected during the study will be kept confidential and anonymous. The data collected will be stored securely on password-protected computers, and access to the data will be restricted to the research team. Only aggregate data will be reported, and no individual participant will be identified in any publications or reports resulting from the study. For future researchers, the anonymous data will be stored on a public database, e.g. Open Science Framework (OSF) to verify the research results and answer further research questions.</p>'+
+        '<p>If you have any questions or concerns about the study, please contact the researcher, Maohua Nie, maohua.nie@unibas.ch.  </p>'
+                '</div>';
+
+ 
+    var welcome = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: consent_html,
+          choices: "NO_KEYS",
+          prompt: '<div id="jspsych-html-button-response-stimulus" style="display: flex; flex-direction: column; align-items: center; width: 80%; margin: 20px auto;">'+
+                  '<div style="font-size: 15px;"><p><strong>By clicking the box below, you acknowledge that you have read and understood this consent form and agree to participate in this study.</strong></p></div>'+
+
+                  '<button class="jspsych-btn" style="width: 1200px; height: 50px; margin-bottom: 10px; font-size: 20px;" id="consent-button">I read and understood the stated terms. I had enough time to make a decision. Herewith, I consent to participate in this study.</button>'+
+                  '<div style="font-size: 20px;"><b>OR</b></div>'+
+                  
+                  '<button class="jspsych-btn" style="width: 450px; height: 50px; font-size: 20px;" id="no-consent-button">I choose not to participate in this study.</button>'+
+                  '</div>',
+          on_load: function() {
+              document.querySelector('#consent-button').addEventListener('click', function() {
+                  jsPsych.finishTrial({button_pressed: 0});
+              });
+              document.querySelector('#no-consent-button').addEventListener('click', function() {
+                  jsPsych.endExperiment('Thank you for your time. You have chosen not to participate in this study.');
+              });
+          },
+          post_trial_gap: 100,
+      };
+    timeline.push(welcome);
+
+    var instructions = {
+    type: jsPsychInstructions,
+    pages: [
+        
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Instruction 1: Procedure</b></p>' +
+        '</div>'+
+
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        '<p><b>Welcome to the experiment!</b></p>' +
+        '<p>This experiment has five sections. First you will be presented with some instructions of the main experiment.</p>' +
+        '<p>Then you will answer three questions about the design.</p>' +
+        '<p>After that, you will see some practice trials of the main experiment.</p>' +
+        '<p>After finishing all blocks of the main experiment, you will need to complete two short tests.</p>' +
+        '<p>In the end, after some demographic questions, your bonus payment will be determined.</p>' +
+        '<p>Press \'Next\' to see the instructions. During the instruction, you can always press \'Previous\' to go back to the last page.</p>' +
+        
+        '</div>'+
+
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Please do not press the refresh button or reload the page during the entire experiment.</b></p>' +
+        '</div>', 
+
+        
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Instruction 2: Main Experiment</b></p>' +
+        '</div>'+
+
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        '<p><b>For the main task, you will see two lottery options in the middle of the screen.</b></p>' +
+        '<p><b>Your task is to choose the option that you prefer.</b></p>' +
+        '<p>Here is an example of a trial that you will see:</p>' +
+        '<div style="display: flex; justify-content: center;">' +
+        '<div style="border: 0px solid black; display: inline-block; margin-left: 0px; text-align: center;">' +
+        '<img src="ins_prac/simple1.png" style="flex-basis: auto; width: 80%;">' +
+        '</div>' +
+        '<div style="border: 0px solid black; display: inline-block; margin-right: 0px; text-align: center;">' +
+        '<img src="ins_prac/compound0.png" style="flex-basis: auto; width: 80%;">' +
+        '</div>' +
+        '</div>' +
+        '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+        '<p style="margin-right: 110px;"><b><span style="display: inline-block; text-align: center;">Press F to choose the left option</span></b></p>' +
+        '<p style="margin-left: 170px;"><b><span style="display: inline-block; text-align: center;">Press J to choose the right option</span></b></p>' +
+        '</div>' +
+        '</div>',
+
+ 
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Instruction 3: Types of lottery options</b></p>' +
+        '</div>'+
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        '<p><b>There are two types of lotteries in this experiment.</b></p>' +
+        '<p>The first one is as displayed below.</p>' +
+        '<p>It has seven outcomes.</p> ' +
+        '<div style="display: flex; justify-content: center;">' +
+        '<div style="border: 0px solid black; display: inline-block; text-align: center;">' +
+        '<img src="ins_prac/compound0.png" style="flex-basis: auto; width: 80%;">' +
+        '</div>' +
+        '</div>' +
+        '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+        '<p style="margin-right: 10px;"><b><span style="display: inline-block; text-align: center;">Press F to choose the left option</span></b></p>' +
+        '</div>' +
+        '</div>',
+
+
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Instruction 4: Outcome calculation</b></p>' +
+        '</div>'+
+
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        
+        '<p>For the option you just saw, the probability of winning 28$ is 18%</p>'+
+        '<p>And the probability of winning 15$ is 12%, and so on.</p>'+
+        '<div style="display: flex; justify-content: center;">' +
+        '<div style="border: 0px solid black; display: inline-block; text-align: center;">' +
+        '<img src="ins_prac/compound0.png" style="flex-basis: auto; width: 80%;">' +
+        '</div>' +
+        '</div>' +
+        '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+        '<p style="margin-right: 10px;"><b><span style="display: inline-block; text-align: center;">Press F to choose the left option</span></b></p>' +
+        '</div>' +'</div>',
+
+
+
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Instruction 5: The Second Type of lotteries</b></p>' +
+        '</div>'+
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+     
+        '<p><b>There are two types of lotteries in this experiment.</b></p>' +
+        '<p>The <b>second</b> one is as displayed below. It has two outcomes.</p>' +
+        '<p> So in this lottery, you have 32 % chance to win 15 $ and 68% chance to win 95 $.</p>'+
+        '<div style="display: flex; justify-content: center;">' +
+        '<div style="border: 0px solid black; display: inline-block; text-align: center;">' +
+        '<img src="ins_prac/simple1.png" style="flex-basis: auto; width: 80%;">' +
+        '</div>' +
+        '</div>' +
+        '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+        '<p style="margin-right: 10px;"><b><span style="display: inline-block; text-align: center;">Press J to choose the right option</span></b></p>' +
+        '</div>' +'</div>',
+        
+        
+        
+        
+
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Instruction 6: Blocks and Bonus Payment</b></p>' +
+        '</div>'+
+
+        '<div style="color:black;font-size:20px;line-height:1">' +
+
+        '<p>There are a total of two blocks, one block will have lotteries in the same kind, the other will have lotteries in different kinds.</p>' +
+        '<p>However, the order will be randomized. Each block has 98 lotteries.</p>'+
+        '<p>You should make careful decisions during the whole experiment.</p>' +
+        '<p><b>In the end, one trial will be selected and performed, your bonus payment will be calculated based on the results!</b></p>' +
+        '<p><b>(Bonus payment = Outcome * 1%)</b></p>'+
+        '<p><b>So, the decision you made could influence the final payment you get.</b></p>'+
+        '</div>',
+
+
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Instruction 7: Decision Time for Each Trial</b></p>' +
+        '</div>'+
+
+        '<div style="color:black;font-size:20px;line-height:1">' +
+            '<p>In each trial, <b>please make your decision within 35 seconds.</b></p>' +
+            '<p>After 35 seconds, you will no longer be able to make a decision, and a \'Go to Next Trial\' button will appear. ' +
+            '<p>Please note that if you did not make any decision for the trial that randomly selected for the bonus payment, <b>the bonus payment will be zero.</b></p>' +
+        '</div>',
+
+
+
+  
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        '<p>You have read all instructions, now please answer some questions about the design.</p>' +
+        '<p>You will be able to start the first block only when you answer the questions correctly.</p>' +
+        '</div>'+
+        '<div style="color:black;font-size:30px;line-height:1.5">' +
+        '<p><b>Please do not use calculator at any time!</b></p>' +
+        '</div>'
+
+    ],
+    show_clickable_nav: true,
+    post_trial_gap: 200
+    };
+
+    timeline.push(instructions);
+
+    var correctResponseIndex0 = 2; 
+    var incorrectLoop0 = true; 
+    var errorMessage0 = ""; 
+
+    var practiceTrial0 = {
+    timeline: [{
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+            return '<div style="color:black;font-size:30px;line-height:1">' +
+                '<p><b>Question 1</b></p>' +
+                '</div>' +
+                '<div style="color:black;font-size:20px;line-height:1">' +
+                '<p>Here is a practice trial.</p>' +
+                
+                '<div style="display: flex; justify-content: center;">' +
+                '<div id="optionA" class="option-container" style="border: 0px solid black; padding: 10px; margin-right: 10px; text-align: center;">' +
+                '<img src="ins_prac/simple0.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '<div id="optionB" class="option-container" style="border: 0px solid black; padding: 10px; margin-left: 10px; text-align: center;">' +
+                '<img src="ins_prac/compound1.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '</div>' +
+                '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+                '<p style="margin-right: 130px;"><b><span style="display: inline-block; text-align: center;">Press F to choose the left option</span></b></p>' +
+                '<p style="margin-left: 200px;"><b><span style="display: inline-block; text-align: center;">Press J to choose the right option</span></b></p>' +
+                '</div>' +
+                '</div>' +
+                '<div style="color:black;font-size:35px;line-height:1">' +
+                    '<p>For the <b>right lottery option</b> above, how many outcomes are there?</p>' +
+                    errorMessage0 +
+                '</div>';
+        },
+        choices: [ '4', '6', '7', '9'],
+        button_html: '<button class="jspsych-btn" style="font-size: 20px; padding: 20px 30px;">%choice%</button>', // Increase button size
+        post_trial_gap: 1000,
+        on_finish: function(data){
+        if(data.response == correctResponseIndex0){
+            incorrectLoop0 = false;
+            errorMessage0 = ""; 
+        } else {
+            errorMessage0 = '<p style="color:red">Incorrect response. Please try again.</p>';
+        };
+        jsPsych.data.addDataToLastTrial({trial_type_label: 'question'});
+
+  
+        },
+    }],
+    loop_function: function(data){
+        return incorrectLoop0;
+    }
+    };
+
+        
+    var correctResponseIndex1 = 3; 
+    var incorrectLoop1 = true; 
+    var errorMessage1 = ""; 
+
+    var practiceTrial = {
+    timeline: [{
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+            return '<div style="color:black;font-size:30px;line-height:1">' +
+                '<p><b>Question 3</b></p>' +
+                '</div>' +
+                '<div style="color:black;font-size:20px;line-height:1">' +
+                '<p>Here is a practice trial.</p>' +
+                
+                '<div style="display: flex; justify-content: center;">' +
+                '<div id="optionA" class="option-container" style="border: 0px solid black; padding: 10px; margin-right: 10px; text-align: center;">' +
+                '<img src="ins_prac/simple0.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '<div id="optionB" class="option-container" style="border: 0px solid black; padding: 10px; margin-left: 10px; text-align: center;">' +
+                '<img src="ins_prac/compound3.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '</div>' +
+                '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+                '<p style="margin-right: 130px;"><b><span style="display: inline-block; text-align: center;">Press F to choose the left option</span></b></p>' +
+                '<p style="margin-left: 200px;"><b><span style="display: inline-block; text-align: center;">Press J to choose the right option</span></b></p>' +
+                '</div>' +
+                '</div>' + 
+                '<div style="color:black;font-size:35px;line-height:1">' +
+                    '<p>For the <b>right lottery option</b> above, the outcome with the probability 18% is</p>' +
+                    errorMessage1 +
+                '</div>';
+        },
+        choices: ['25 $', '65 $', '140 $', '45 $'],
+        button_html: '<button class="jspsych-btn" style="font-size: 20px; padding: 20px 30px;">%choice%</button>', // Increase button size
+        post_trial_gap: 1000,
+        on_finish: function(data){
+        if(data.response == correctResponseIndex1){
+            incorrectLoop1 = false;
+            errorMessage1 = ""; 
+        } else {
+            errorMessage1 = '<p style="color:red">Incorrect response. Please try again.</p>';
+        };
+        jsPsych.data.addDataToLastTrial({trial_type_label: 'question'});
+
+  
+        },
+    }],
+    loop_function: function(data){
+        return incorrectLoop1;
+    }
+    };
+
+    var correctResponseIndex2 = 0; 
+    var incorrectLoop2 = true;
+    var errorMessage2 = ""; 
+
+    var practiceTrial2 = {
+    timeline: [{
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+            return '<div style="color:black;font-size:30px;line-height:1">' +
+                '<p><b>Question 2</b></p>' +
+                '</div>' +
+                '<div style="color:black;font-size:20px;line-height:1">' +
+                '<p>Here is a practice trial.</p>' +
+                
+                '<div style="display: flex; justify-content: center;">' +
+                '<div id="optionA" class="option-container" style="border: 0px solid black; padding: 10px; margin-right: 10px; text-align: center;">' +
+                '<img src="ins_prac/simple0.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '<div id="optionB" class="option-container" style="border: 0px solid black; padding: 10px; margin-left: 10px; text-align: center;">' +
+                '<img src="ins_prac/compound1.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '</div>' +
+                '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+                '<p style="margin-right: 130px;"><b><span style="display: inline-block; text-align: center;">Press F to choose the left option</span></b></p>' +
+                '<p style="margin-left: 200px;"><b><span style="display: inline-block; text-align: center;">Press J to choose the right option</span></b></p>' +
+                '</div>' +
+                '</div>' +
+                '<div style="color:black;font-size:35px;line-height:1">' +
+                    '<p>For the <b>left lottery option</b> above, the probability of getting 120 $ is</p>' +
+                    errorMessage2 +
+                '</div>'
+                ;
+        },
+        choices: ['60%', '40%', '25%', '15%'], 
+        button_html: '<button class="jspsych-btn" style="font-size: 20px; padding: 20px 30px;">%choice%</button>', // Increase button size
+        post_trial_gap: 1000,
+        on_finish: function(data){
+        if(data.response == correctResponseIndex2){
+            incorrectLoop2 = false;
+            errorMessage2 = ""; 
+        } else {
+            errorMessage2 = '<p style="color:red">Incorrect response. Please try again.</p>';
+        };
+        jsPsych.data.addDataToLastTrial({trial_type_label: 'question'});
+        },
+    }],
+    loop_function: function(data){
+        return incorrectLoop2;
+    }
+    };
+
+
+    var correctResponseIndex3 = 1; // correct response
+    var incorrectLoop3 = true; // variable to control the loop
+    var errorMessage3 = ""; // error message starts out empty
+
+    var practiceTrial3 = {
+    timeline: [{
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+            return '<div style="color:black;font-size:30px;line-height:1">' +
+                '<p><b>Question 4</b></p>' +
+                '</div>' +
+                '<div style="color:black;font-size:20px;line-height:1">' +
+                '<p>Here is a practice trial.</p>' +
+                
+                '<div style="display: flex; justify-content: center;">' +
+                '<div id="optionA" class="option-container" style="border: 0px solid black; padding: 10px; margin-right: 10px; text-align: center;">' +
+                '<img src="ins_prac/simple0.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '<div id="optionB" class="option-container" style="border: 0px solid black; padding: 10px; margin-left: 10px; text-align: center;">' +
+                '<img src="ins_prac/simple1.png" style="flex-basis: auto; width: 80%;">' +
+                '</div>' +
+                '</div>' +
+                '<div style="display: flex; justify-content: center; margin-top: 10px;">' +
+                '<p style="margin-right: 130px;"><b><span style="display: inline-block; text-align: center;">Press F to choose the left option</span></b></p>' +
+                '<p style="margin-left: 200px;"><b><span style="display: inline-block; text-align: center;">Press J to choose the right option</span></b></p>' +
+                '</div>' +
+                '</div>' +
+                '<div style="color:black;font-size:35px;line-height:1">' +
+                    '<p>For all four monetary outcomes in the two options above, which one has the <b>highest probability</b>?</p>' +
+                    errorMessage3 +
+                '</div>';
+        },
+        choices: ['25 $', '95 $', '120 $', '15 $'], // 10 seconds to make a choice
+        button_html: '<button class="jspsych-btn" style="font-size: 20px; padding: 20px 30px;">%choice%</button>', // Increase button size
+        post_trial_gap: 1000,
+        on_finish: function(data){
+        // if the participant response is correct, set incorrectLoop to false
+        if(data.response == correctResponseIndex3){
+            incorrectLoop3 = false;
+            errorMessage3 = ""; // reset the error message
+        } else {
+            errorMessage3 = '<p style="color:red">Incorrect response. Please try again.</p>';
+        };
+        jsPsych.data.addDataToLastTrial({trial_type_label: 'question'});
+        },
+    }],
+    loop_function: function(data){
+        // if incorrectLoop is true, the loop continues
+        return incorrectLoop3;
+    }
+    };
+    timeline.push(practiceTrial0);
+    timeline.push(practiceTrial2);
+    timeline.push(practiceTrial);
+    timeline.push(practiceTrial3);
+
+
+            /* define Trial blocks message */
+    var practiceTrials = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: '<div style="color:black;font-size:20px;line-height:1.5"><b>You have correctly answered all questions. Now you will see some practice trials. Please press any key to begin.</b></div>' +
+          '<br>'+
+
+          '<div style="color:black;font-size:20px;line-height:1.5"><b>After you have made your choice, the option you selected will turn blue shortly.</b></div>',
+        key_forward: 'rightarrow',
+        post_trial_gap: 1000,
+          
+        };
+    timeline.push(practiceTrials);
+
+        /* define End of trial block message */
+    var practiceEnd = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '<div style="color:black;font-size:20px;line-height:1.5">Great! Now it is time for the main experiment. Good luck!</div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5"> Press any key to move forward with the Block 1!</div>',
+          key_forward: 'rightarrow',
+          post_trial_gap: 3000,
+          
+        };
+
+        /* define between blocks message */
+    var betweenTrials1 = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '<div style="color:black;font-size:20px;line-height:1.5">You have just completed Block 1! </div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5">Press any key to move forward with Block 2 of the experiment!</div>',
+          key_forward: 'rightarrow',
+          
+          post_trial_gap: 3000,
+          
+        };
+
+   
+
+      
+
+    var finalTrials = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '<div style="color:black;font-size:20px;line-height:1.5">You have just completed all blocks of the main experiment! </div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5"> Next you need to complete two short tests. </div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5"> For each test, <b>you will receive bonus payment based on your accuracy. Maximal bonus for each test is 0.5$.  </b></div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5">Please do not use any calculator. Press any key to continue.</div>',
+          key_forward: 'rightarrow',
+          
+          post_trial_gap: 2000,
+              
+        };
+
+    var beforecogtest1 = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: 
+          '<div style="color:black;font-size:20px;line-height:1.5">In the first test, you will see four questions about probability. You should try to find the best answer.</div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5">You <b>will not</b> get the feedback after you made your response.</div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5">However, you <b>will be</b> informed about your accuracy and bonus payment when you finish the test.</div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5">Please do not use any calculator. Press any key to continue.</div>',
+          key_forward: 'rightarrow',
+          
+          post_trial_gap: 2000,
+              
+        };
+
+    var beforecogtest2 = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '<div style="color:black;font-size:20px;line-height:1.5">You have just completed the first test. </div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5">Please press any key to continue with the second test. Also, you <b>will not</b> get the feedback of the questions.</div>'+
+          '<div style="color:black;font-size:20px;line-height:1.5">However, you <b>will be</b> informed about your accuracy and bonus payment.</div>',
+          key_forward: 'rightarrow',
+          
+          post_trial_gap: 2000,
+              
+        };
+
+    var beforecogtest3 = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: 
+          '<div style="color:black;font-size:20px;line-height:1.5">Please press any key to continue with some demographic questions.</div>',
+          key_forward: 'rightarrow',
+          
+          post_trial_gap: 2000,
+              
+        };
+
+    /* define stimuli */
+        
+
+        /* Practice Trials - stim */
+    var pracStim = [
+            { stimulus: 'ins_prac/simple2.png, ins_prac/simple3.png', data: { test_part: 'prac'} },
+            { stimulus: 'ins_prac/compound2.png, ins_prac/compound3.png', data: { test_part: 'prac'} },
+            { stimulus: 'ins_prac/simple4.png, ins_prac/compound4.png', data: { test_part: 'prac'} },
+            ]
+   
+
+    var stimuli_same = [
+    { stimulus: 'png/1_optionA_simple_ct.png, png/1_optionB_simple_ct.png', data: { test_part: 'ss', skew: 'cn' }, F: {probA1: 53, payA1: 61, probA2: 47, payA2: 25 }, J: {probB1: 79, payB1: 15, probB2: 21, payB2: 59 } },
+ { stimulus: 'png/2_optionA_simple_ct.png, png/2_optionB_simple_ct.png', data: { test_part: 'ss', skew: 'cn' }, F: {probA1: 47, payA1: 22, probA2: 53, payA2: 90 }, J: {probB1: 41, payB1: 78, probB2: 59, payB2: 9 } },
+ { stimulus: 'png/3_optionA_simple_ct.png, png/3_optionB_simple_ct.png', data: { test_part: 'ss', skew: 'cn' }, F: {probA1: 70, payA1: 14, probA2: 30, payA2: 57 }, J: {probB1: 59, payB1: 64, probB2: 41, payB2: 24 } },
+ { stimulus: 'png/4_optionA_simple_ct.png, png/4_optionB_simple_ct.png', data: { test_part: 'ss', skew: 'cn' }, F: {probA1: 38, payA1: 67, probA2: 62, payA2: 113 }, J: {probB1: 22, payB1: 73, probB2: 78, payB2: 127 } },
+ { stimulus: 'png/1_optionA_complex_ct.png, png/1_optionB_complex_ct.png', data: { test_part: 'cc', skew: 'cn' }, F: {probA1: 11, payA1: 89, probA2: 16, payA2: 72, probA3: 18, payA3: 57, probA4: 14, payA4: 29, probA5: 13, payA5: 26, probA6: 20, payA6: 21, probA7: 8, payA7: 12 }, J: {probB1: 17, payB1: 44, probB2: 11, payB2: 42, probB3: 20, payB3: 27, probB4: 12, payB4: 26, probB5: 13, payB5: 24, probB6: 9, payB6: 3, probB7: 18, payB7: 2 } },
+ { stimulus: 'png/2_optionA_complex_ct.png, png/2_optionB_complex_ct.png', data: { test_part: 'cc', skew: 'cn' }, F: {probA1: 16, payA1: 106, probA2: 10, payA2: 75, probA3: 8, payA3: 69, probA4: 14, payA4: 61, probA5: 15, payA5: 58, probA6: 20, payA6: 47, probA7: 17, payA7: 9 }, J: {probB1: 20, payB1: 67, probB2: 18, payB2: 58, probB3: 8, payB3: 57, probB4: 14, payB4: 47, probB5: 16, payB5: 11, probB6: 13, payB6: 3, probB7: 11, payB7: 2 } },
+ { stimulus: 'png/3_optionA_complex_ct.png, png/3_optionB_complex_ct.png', data: { test_part: 'cc', skew: 'cn' }, F: {probA1: 18, payA1: 36, probA2: 17, payA2: 32, probA3: 16, payA3: 31, probA4: 10, payA4: 29, probA5: 12, payA5: 23, probA6: 19, payA6: 21, probA7: 8, payA7: 7 }, J: {probB1: 16, payB1: 86, probB2: 14, payB2: 66, probB3: 11, payB3: 58, probB4: 19, payB4: 52, probB5: 17, payB5: 22, probB6: 8, payB6: 21, probB7: 15, payB7: 19 } },
+ { stimulus: 'png/4_optionA_complex_ct.png, png/4_optionB_complex_ct.png', data: { test_part: 'cc', skew: 'cn' }, F: {probA1: 11, payA1: 168, probA2: 18, payA2: 161, probA3: 8, payA3: 149, probA4: 20, payA4: 106, probA5: 15, payA5: 52, probA6: 16, payA6: 29, probA7: 12, payA7: 21 }, J: {probB1: 9, payB1: 152, probB2: 11, payB2: 145, probB3: 15, payB3: 137, probB4: 19, payB4: 133, probB5: 18, payB5: 120, probB6: 8, payB6: 74, probB7: 20, payB7: 60 } },
+    { stimulus: 'png/1_optionA_simple.png, png/1_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 87, payA1: 75, probA2: 13, payA2: 149 }, J: {probB1: 84, payB1: 89, probB2: 16, payB2: 61 } },
+    { stimulus: 'png/2_optionA_simple.png, png/2_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 91, payA1: 97, probA2: 9, payA2: 134 }, J: {probB1: 14, payB1: 87, probB2: 86, payB2: 103 } },
+    { stimulus: 'png/3_optionA_simple.png, png/3_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 86, payA1: 52, probA2: 14, payA2: 116 }, J: {probB1: 89, payB1: 66, probB2: 11, payB2: 28 } },
+    { stimulus: 'png/4_optionA_simple.png, png/4_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 82, payA1: 89, probA2: 18, payA2: 195 }, J: {probB1: 12, payB1: 46, probB2: 88, payB2: 127 } },
+    { stimulus: 'png/5_optionA_simple.png, png/5_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 83, payA1: 130, probA2: 17, payA2: 187 }, J: {probB1: 96, payB1: 153, probB2: 4, payB2: 70 } },
+    { stimulus: 'png/6_optionA_simple.png, png/6_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 81, payA1: 66, probA2: 19, payA2: 108 }, J: {probB1: 13, payB1: 68, probB2: 87, payB2: 87 } },
+    { stimulus: 'png/7_optionA_simple.png, png/7_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 87, payA1: 48, probA2: 13, payA2: 115 }, J: {probB1: 17, payB1: 58, probB2: 83, payB2: 80 } },
+    { stimulus: 'png/8_optionA_simple.png, png/8_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 86, payA1: 72, probA2: 14, payA2: 199 }, J: {probB1: 16, payB1: 19, probB2: 84, payB2: 128 } },
+    { stimulus: 'png/9_optionA_simple.png, png/9_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 83, payA1: 59, probA2: 17, payA2: 138 }, J: {probB1: 86, payB1: 101, probB2: 14, payB2: 42 } },
+    { stimulus: 'png/10_optionA_simple.png, png/10_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 12, payA1: 163, probA2: 88, payA2: 58 }, J: {probB1: 17, payB1: 7, probB2: 83, payB2: 59 } },
+    { stimulus: 'png/11_optionA_simple.png, png/11_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 83, payA1: 115, probA2: 17, payA2: 197 }, J: {probB1: 7, payB1: 17, probB2: 93, payB2: 116 } },
+    { stimulus: 'png/12_optionA_simple.png, png/12_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 18, payA1: 170, probA2: 82, payA2: 94 }, J: {probB1: 12, payB1: 38, probB2: 88, payB2: 95 } },
+    { stimulus: 'png/13_optionA_simple.png, png/13_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 88, payA1: 93, probA2: 12, payA2: 192 }, J: {probB1: 93, payB1: 100, probB2: 7, payB2: 31 } },
+    { stimulus: 'png/14_optionA_simple.png, png/14_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 18, payA1: 167, probA2: 82, payA2: 99 }, J: {probB1: 19, payB1: 59, probB2: 81, payB2: 111 } },
+    { stimulus: 'png/15_optionA_simple.png, png/15_optionB_simple.png', data: { test_part: 'ss', skew: 'rl' }, F: {probA1: 81, payA1: 108, probA2: 19, payA2: 193 }, J: {probB1: 17, payB1: 63, probB2: 83, payB2: 125 } },
+    { stimulus: 'png/16_optionA_simple.png, png/16_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 87, payA1: 97, probA2: 13, payA2: 38 }, J: {probB1: 84, payB1: 87, probB2: 16, payB2: 100 } },
+    { stimulus: 'png/17_optionA_simple.png, png/17_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 91, payA1: 52, probA2: 9, payA2: 18 }, J: {probB1: 14, payB1: 62, probB2: 86, payB2: 47 } },
+    { stimulus: 'png/18_optionA_simple.png, png/18_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 86, payA1: 79, probA2: 14, payA2: 27 }, J: {probB1: 89, payB1: 69, probB2: 11, payB2: 96 } },
+    { stimulus: 'png/19_optionA_simple.png, png/19_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 82, payA1: 98, probA2: 18, payA2: 11 }, J: {probB1: 12, payB1: 143, probB2: 88, payB2: 85 } },
+    { stimulus: 'png/20_optionA_simple.png, png/20_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 83, payA1: 60, probA2: 17, payA2: 9 }, J: {probB1: 96, payB1: 58, probB2: 4, payB2: 130 } },
+    { stimulus: 'png/21_optionA_simple.png, png/21_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 81, payA1: 134, probA2: 19, payA2: 48 }, J: {probB1: 13, payB1: 189, probB2: 87, payB2: 118 } },
+    { stimulus: 'png/22_optionA_simple.png, png/22_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 87, payA1: 107, probA2: 13, payA2: 3 }, J: {probB1: 17, payB1: 157, probB2: 83, payB2: 104 } },
+    { stimulus: 'png/23_optionA_simple.png, png/23_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 86, payA1: 95, probA2: 14, payA2: 9 }, J: {probB1: 16, payB1: 159, probB2: 84, payB2: 92 } },
+    { stimulus: 'png/24_optionA_simple.png, png/24_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 83, payA1: 108, probA2: 17, payA2: 25 }, J: {probB1: 86, payB1: 106, probB2: 14, payB2: 166 } },
+    { stimulus: 'png/25_optionA_simple.png, png/25_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 12, payA1: 2, probA2: 88, payA2: 77 }, J: {probB1: 17, payB1: 69, probB2: 83, payB2: 43 } },
+    { stimulus: 'png/26_optionA_simple.png, png/26_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 83, payA1: 91, probA2: 17, payA2: 46 }, J: {probB1: 7, payB1: 108, probB2: 93, payB2: 60 } },
+    { stimulus: 'png/27_optionA_simple.png, png/27_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 18, payA1: 23, probA2: 82, payA2: 74 }, J: {probB1: 12, payB1: 70, probB2: 88, payB2: 42 } },
+    { stimulus: 'png/28_optionA_simple.png, png/28_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 88, payA1: 87, probA2: 12, payA2: 11 }, J: {probB1: 93, payB1: 65, probB2: 7, payB2: 104 } },
+    { stimulus: 'png/29_optionA_simple.png, png/29_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 18, payA1: 10, probA2: 82, payA2: 49 }, J: {probB1: 19, payB1: 52, probB2: 81, payB2: 27 } },
+    { stimulus: 'png/30_optionA_simple.png, png/30_optionB_simple.png', data: { test_part: 'ss', skew: 'lr' }, F: {probA1: 81, payA1: 49, probA2: 19, payA2: 9 }, J: {probB1: 17, payB1: 44, probB2: 83, payB2: 29 } },
+    { stimulus: 'png/31_optionA_simple.png, png/31_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 44, payA1: 18, probA2: 56, payA2: 151 }, J: {probB1: 65, payB1: 141, probB2: 35, payB2: 33 } },
+    { stimulus: 'png/32_optionA_simple.png, png/32_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 36, payA1: 84, probA2: 64, payA2: 12 }, J: {probB1: 54, payB1: 20, probB2: 46, payB2: 80 } },
+    { stimulus: 'png/33_optionA_simple.png, png/33_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 45, payA1: 182, probA2: 55, payA2: 39 }, J: {probB1: 40, payB1: 188, probB2: 60, payB2: 63 } },
+    { stimulus: 'png/34_optionA_simple.png, png/34_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 57, payA1: 24, probA2: 42, payA2: 82 }, J: {probB1: 56, payB1: 57, probB2: 43, payB2: 84 } },
+    { stimulus: 'png/35_optionA_simple.png, png/35_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 62, payA1: 78, probA2: 38, payA2: 14 }, J: {probB1: 34, payB1: 38, probB2: 66, payB2: 92 } },
+    { stimulus: 'png/36_optionA_simple.png, png/36_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 60, payA1: 65, probA2: 40, payA2: 13 }, J: {probB1: 56, payB1: 78, probB2: 43, payB2: 47 } },
+    { stimulus: 'png/37_optionA_simple.png, png/37_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 41, payA1: 19, probA2: 59, payA2: 124 }, J: {probB1: 37, payB1: 13, probB2: 63, payB2: 89 } },
+    { stimulus: 'png/38_optionA_simple.png, png/38_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 62, payA1: 47, probA2: 38, payA2: 155 }, J: {probB1: 44, payB1: 121, probB2: 56, payB2: 26 } },
+    { stimulus: 'png/39_optionA_simple.png, png/39_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 62, payA1: 180, probA2: 38, payA2: 23 }, J: {probB1: 56, payB1: 159, probB2: 44, payB2: 26 } },
+    { stimulus: 'png/40_optionA_simple.png, png/40_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 44, payA1: 89, probA2: 56, payA2: 41 }, J: {probB1: 54, payB1: 60, probB2: 46, payB2: 43 } },
+    { stimulus: 'png/41_optionA_simple.png, png/41_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 30, payA1: 43, probA2: 70, payA2: 75 }, J: {probB1: 63, payB1: 63, probB2: 37, payB2: 43 } },
+    { stimulus: 'png/42_optionA_simple.png, png/42_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 37, payA1: 119, probA2: 63, payA2: 16 }, J: {probB1: 45, payB1: 87, probB2: 55, payB2: 8 } },
+    { stimulus: 'png/43_optionA_simple.png, png/43_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 46, payA1: 93, probA2: 54, payA2: 56 }, J: {probB1: 49, payB1: 69, probB2: 51, payB2: 77 } },
+    { stimulus: 'png/44_optionA_simple.png, png/44_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 56, payA1: 28, probA2: 43, payA2: 68 }, J: {probB1: 52, payB1: 59, probB2: 48, payB2: 30 } },
+    { stimulus: 'png/45_optionA_simple.png, png/45_optionB_simple.png', data: { test_part: 'ss', skew: 'ns' }, F: {probA1: 56, payA1: 3, probA2: 44, payA2: 48 }, J: {probB1: 47, payB1: 10, probB2: 53, payB2: 34 } } ,
+    { stimulus: 'png/1_optionA_complex.png, png/1_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 3, payA1: 180, probA2: 8, payA2: 168, probA3: 20, payA3: 119, probA4: 9, payA4: 103, probA5: 16, payA5: 77, probA6: 17, payA6: 60, probA7: 27, payA7: 36 }, J: {probB1: 30, payB1: 126, probB2: 11, payB2: 91, probB3: 8, payB3: 73, probB4: 18, payB4: 69, probB5: 19, payB5: 66, probB6: 9, payB6: 53, probB7: 5, payB7: 25 } },
+    { stimulus: 'png/2_optionA_complex.png, png/2_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 3, payA2: 163, probA3: 19, payA3: 139, probA4: 8, payA4: 118, probA5: 18, payA5: 109, probA6: 21, payA6: 75, probA7: 28, payA7: 71 }, J: {probB1: 31, payB1: 137, probB2: 15, payB2: 133, probB3: 12, payB3: 97, probB4: 8, payB4: 90, probB5: 26, payB5: 67, probB6: 6, payB6: 34, probB7: 2, payB7: 2 } },
+    { stimulus: 'png/3_optionA_complex.png, png/3_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 4, payA2: 175, probA3: 9, payA3: 142, probA4: 5, payA4: 78, probA5: 39, payA5: 65, probA6: 19, payA6: 25, probA7: 22, payA7: 12 }, J: {probB1: 28, payB1: 116, probB2: 7, payB2: 86, probB3: 21, payB3: 53, probB4: 11, payB4: 40, probB5: 18, payB5: 26, probB6: 12, payB6: 12, probB7: 2, payB7: 10 } },
+    { stimulus: 'png/4_optionA_complex.png, png/4_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 161, probA2: 3, payA2: 160, probA3: 17, payA3: 157, probA4: 8, payA4: 141, probA5: 18, payA5: 124, probA6: 13, payA6: 98, probA7: 39, payA7: 71 }, J: {probB1: 28, payB1: 180, probB2: 10, payB2: 140, probB3: 30, payB3: 106, probB4: 9, payB4: 104, probB5: 7, payB5: 93, probB6: 14, payB6: 30, probB7: 2, payB7: 27 } },
+    { stimulus: 'png/5_optionA_complex.png, png/5_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 4, payA1: 180, probA2: 5, payA2: 163, probA3: 11, payA3: 162, probA4: 34, payA4: 138, probA5: 7, payA5: 136, probA6: 24, payA6: 132, probA7: 15, payA7: 120 }, J: {probB1: 9, payB1: 180, probB2: 30, payB2: 176, probB3: 13, payB3: 155, probB4: 7, payB4: 152, probB5: 4, payB5: 151, probB6: 34, payB6: 119, probB7: 3, payB7: 90 } },
+    { stimulus: 'png/6_optionA_complex.png, png/6_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 152, probA2: 3, payA2: 144, probA3: 23, payA3: 128, probA4: 4, payA4: 87, probA5: 33, payA5: 62, probA6: 8, payA6: 42, probA7: 27, payA7: 39 }, J: {probB1: 10, payB1: 180, probB2: 25, payB2: 167, probB3: 4, payB3: 73, probB4: 14, payB4: 58, probB5: 23, payB5: 42, probB6: 22, payB6: 17, probB7: 2, payB7: 6 } },
+    { stimulus: 'png/7_optionA_complex.png, png/7_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 173, probA2: 19, payA2: 128, probA3: 7, payA3: 78, probA4: 6, payA4: 65, probA5: 14, payA5: 38, probA6: 28, payA6: 37, probA7: 24, payA7: 17 }, J: {probB1: 6, payB1: 145, probB2: 12, payB2: 128, probB3: 10, payB3: 99, probB4: 40, payB4: 80, probB5: 15, payB5: 58, probB6: 13, payB6: 11, probB7: 4, payB7: 7 } },
+    { stimulus: 'png/8_optionA_complex.png, png/8_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 6, payA2: 169, probA3: 3, payA3: 149, probA4: 36, payA4: 117, probA5: 17, payA5: 112, probA6: 4, payA6: 37, probA7: 32, payA7: 27 }, J: {probB1: 17, payB1: 180, probB2: 24, payB2: 157, probB3: 3, payB3: 155, probB4: 19, payB4: 122, probB5: 10, payB5: 42, probB6: 25, payB6: 38, probB7: 2, payB7: 23 } },
+    { stimulus: 'png/9_optionA_complex.png, png/9_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 175, probA2: 4, payA2: 153, probA3: 32, payA3: 90, probA4: 12, payA4: 71, probA5: 20, payA5: 59, probA6: 8, payA6: 52, probA7: 22, payA7: 44 }, J: {probB1: 18, payB1: 134, probB2: 22, payB2: 109, probB3: 35, payB3: 100, probB4: 3, payB4: 77, probB5: 8, payB5: 65, probB6: 12, payB6: 17, probB7: 2, payB7: 9 } },
+    { stimulus: 'png/10_optionA_complex.png, png/10_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 3, payA1: 173, probA2: 9, payA2: 159, probA3: 5, payA3: 86, probA4: 21, payA4: 79, probA5: 4, payA5: 73, probA6: 31, payA6: 49, probA7: 27, payA7: 45 }, J: {probB1: 4, payB1: 69, probB2: 28, payB2: 62, probB3: 22, payB3: 60, probB4: 23, payB4: 47, probB5: 10, payB5: 30, probB6: 11, payB6: 25, probB7: 2, payB7: 16 } },
+    { stimulus: 'png/11_optionA_complex.png, png/11_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 26, payA2: 159, probA3: 15, payA3: 141, probA4: 3, payA4: 125, probA5: 37, payA5: 115, probA6: 12, payA6: 104, probA7: 5, payA7: 68 }, J: {probB1: 31, payB1: 137, probB2: 5, payB2: 134, probB3: 23, payB3: 126, probB4: 25, payB4: 106, probB5: 8, payB5: 30, probB6: 6, payB6: 29, probB7: 2, payB7: 25 } },
+    { stimulus: 'png/12_optionA_complex.png, png/12_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 23, payA2: 134, probA3: 13, payA3: 131, probA4: 17, payA4: 112, probA5: 24, payA5: 88, probA6: 7, payA6: 80, probA7: 14, payA7: 73 }, J: {probB1: 3, payB1: 174, probB2: 4, payB2: 169, probB3: 36, payB3: 141, probB4: 9, payB4: 77, probB5: 19, payB5: 63, probB6: 27, payB6: 23, probB7: 2, payB7: 13 } },
+    { stimulus: 'png/13_optionA_complex.png, png/13_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 3, payA1: 180, probA2: 6, payA2: 169, probA3: 9, payA3: 112, probA4: 30, payA4: 110, probA5: 4, payA5: 97, probA6: 28, payA6: 91, probA7: 19, payA7: 80 }, J: {probB1: 14, payB1: 146, probB2: 4, payB2: 137, probB3: 40, payB3: 114, probB4: 6, payB4: 81, probB5: 10, payB5: 79, probB6: 23, payB6: 46, probB7: 3, payB7: 21 } },
+    { stimulus: 'png/14_optionA_complex.png, png/14_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 15, payA2: 177, probA3: 3, payA3: 125, probA4: 39, payA4: 114, probA5: 6, payA5: 90, probA6: 9, payA6: 86, probA7: 26, payA7: 73 }, J: {probB1: 16, payB1: 158, probB2: 10, payB2: 151, probB3: 30, payB3: 101, probB4: 23, payB4: 88, probB5: 4, payB5: 74, probB6: 15, payB6: 46, probB7: 2, payB7: 5 } },
+    { stimulus: 'png/15_optionA_complex.png, png/15_optionB_complex.png', data: { test_part: 'cc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 7, payA2: 178, probA3: 13, payA3: 158, probA4: 16, payA4: 143, probA5: 8, payA5: 130, probA6: 17, payA6: 101, probA7: 37, payA7: 100 }, J: {probB1: 20, payB1: 180, probB2: 10, payB2: 156, probB3: 9, payB3: 139, probB4: 22, payB4: 89, probB5: 17, payB5: 86, probB6: 14, payB6: 84, probB7: 8, payB7: 49 } },
+    { stimulus: 'png/16_optionA_complex.png, png/16_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 23, payA1: 136, probA2: 21, payA2: 116, probA3: 8, payA3: 106, probA4: 20, payA4: 95, probA5: 19, payA5: 25, probA6: 6, payA6: 18, probA7: 3, payA7: 16 }, J: {probB1: 2, payB1: 153, probB2: 14, payB2: 116, probB3: 7, payB3: 114, probB4: 36, payB4: 96, probB5: 16, payB5: 90, probB6: 12, payB6: 55, probB7: 13, payB7: 48 } },
+    { stimulus: 'png/17_optionA_complex.png, png/17_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 20, payA1: 63, probA2: 7, payA2: 58, probA3: 5, payA3: 56, probA4: 36, payA4: 49, probA5: 15, payA5: 46, probA6: 13, payA6: 35, probA7: 4, payA7: 7 }, J: {probB1: 2, payB1: 170, probB2: 7, payB2: 156, probB3: 9, payB3: 69, probB4: 4, payB4: 55, probB5: 34, payB5: 44, probB6: 26, payB6: 30, probB7: 18, payB7: 20 } },
+    { stimulus: 'png/18_optionA_complex.png, png/18_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 21, payA1: 106, probA2: 35, payA2: 93, probA3: 14, payA3: 53, probA4: 10, payA4: 52, probA5: 5, payA5: 29, probA6: 13, payA6: 20, probA7: 2, payA7: 7 }, J: {probB1: 2, payB1: 137, probB2: 24, payB2: 121, probB3: 4, payB3: 86, probB4: 32, payB4: 64, probB5: 8, payB5: 56, probB6: 14, payB6: 44, probB7: 16, payB7: 35 } },
+    { stimulus: 'png/19_optionA_complex.png, png/19_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 11, payA1: 114, probA2: 34, payA2: 111, probA3: 22, payA3: 85, probA4: 4, payA4: 61, probA5: 16, payA5: 52, probA6: 10, payA6: 24, probA7: 3, payA7: 15 }, J: {probB1: 2, payB1: 179, probB2: 9, payB2: 169, probB3: 28, payB3: 98, probB4: 11, payB4: 94, probB5: 19, payB5: 79, probB6: 13, payB6: 76, probB7: 17, payB7: 57 } },
+    { stimulus: 'png/20_optionA_complex.png, png/20_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 34, payA1: 67, probA2: 17, payA2: 61, probA3: 15, payA3: 56, probA4: 20, payA4: 31, probA5: 9, payA5: 27, probA6: 3, payA6: 26, probA7: 2, payA7: 10 }, J: {probB1: 2, payB1: 150, probB2: 22, payB2: 107, probB3: 5, payB3: 87, probB4: 7, payB4: 78, probB5: 19, payB5: 50, probB6: 18, payB6: 39, probB7: 27, payB7: 30 } },
+    { stimulus: 'png/21_optionA_complex.png, png/21_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 26, payA1: 141, probA2: 28, payA2: 138, probA3: 23, payA3: 107, probA4: 4, payA4: 105, probA5: 13, payA5: 81, probA6: 3, payA6: 35, probA7: 2, payA7: 14 }, J: {probB1: 2, payB1: 180, probB2: 14, payB2: 151, probB3: 32, payB3: 137, probB4: 6, payB4: 123, probB5: 3, payB5: 118, probB6: 35, payB6: 110, probB7: 8, payB7: 106 } },
+    { stimulus: 'png/22_optionA_complex.png, png/22_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 34, payA1: 107, probA2: 22, payA2: 106, probA3: 9, payA3: 95, probA4: 6, payA4: 93, probA5: 15, payA5: 88, probA6: 12, payA6: 52, probA7: 2, payA7: 12 }, J: {probB1: 4, payB1: 180, probB2: 10, payB2: 157, probB3: 17, payB3: 141, probB4: 20, payB4: 127, probB5: 12, payB5: 105, probB6: 8, payB6: 87, probB7: 28, payB7: 74 } },
+    { stimulus: 'png/23_optionA_complex.png, png/23_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 10, payA1: 110, probA2: 34, payA2: 106, probA3: 3, payA3: 88, probA4: 28, payA4: 86, probA5: 4, payA5: 63, probA6: 19, payA6: 32, probA7: 2, payA7: 26 }, J: {probB1: 4, payB1: 180, probB2: 12, payB2: 129, probB3: 20, payB3: 121, probB4: 5, payB4: 120, probB5: 24, payB5: 105, probB6: 9, payB6: 98, probB7: 26, payB7: 60 } },
+    { stimulus: 'png/24_optionA_complex.png, png/24_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 5, payA1: 136, probA2: 24, payA2: 124, probA3: 8, payA3: 114, probA4: 9, payA4: 108, probA5: 28, payA5: 89, probA6: 21, payA6: 57, probA7: 4, payA7: 14 }, J: {probB1: 3, payB1: 180, probB2: 10, payB2: 156, probB3: 9, payB3: 144, probB4: 8, payB4: 141, probB5: 31, payB5: 106, probB6: 17, payB6: 105, probB7: 22, payB7: 83 } },
+    { stimulus: 'png/25_optionA_complex.png, png/25_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 28, payA1: 107, probA2: 6, payA2: 91, probA3: 16, payA3: 81, probA4: 18, payA4: 53, probA5: 19, payA5: 33, probA6: 7, payA6: 27, probA7: 5, payA7: 19 }, J: {probB1: 2, payB1: 122, probB2: 13, payB2: 94, probB3: 23, payB3: 49, probB4: 37, payB4: 46, probB5: 3, payB5: 43, probB6: 10, payB6: 28, probB7: 12, payB7: 5 } },
+    { stimulus: 'png/26_optionA_complex.png, png/26_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 20, payA1: 119, probA2: 22, payA2: 105, probA3: 10, payA3: 99, probA4: 7, payA4: 76, probA5: 11, payA5: 61, probA6: 28, payA6: 50, probA7: 2, payA7: 31 }, J: {probB1: 2, payB1: 115, probB2: 8, payB2: 84, probB3: 18, payB3: 76, probB4: 23, payB4: 65, probB5: 37, payB5: 56, probB6: 3, payB6: 45, probB7: 9, payB7: 38 } },
+    { stimulus: 'png/27_optionA_complex.png, png/27_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 39, payA1: 86, probA2: 10, payA2: 72, probA3: 21, payA3: 71, probA4: 6, payA4: 44, probA5: 12, payA5: 36, probA6: 9, payA6: 25, probA7: 3, payA7: 3 }, J: {probB1: 2, payB1: 131, probB2: 4, payB2: 100, probB3: 11, payB3: 78, probB4: 28, payB4: 62, probB5: 19, payB5: 48, probB6: 7, payB6: 18, probB7: 28, payB7: 6 } },
+    { stimulus: 'png/28_optionA_complex.png, png/28_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 5, payA1: 139, probA2: 11, payA2: 131, probA3: 9, payA3: 129, probA4: 32, payA4: 72, probA5: 21, payA5: 70, probA6: 19, payA6: 42, probA7: 3, payA7: 3 }, J: {probB1: 2, payB1: 169, probB2: 8, payB2: 138, probB3: 22, payB3: 98, probB4: 28, payB4: 56, probB5: 18, payB5: 46, probB6: 12, payB6: 39, probB7: 9, payB7: 29 } },
+    { stimulus: 'png/29_optionA_complex.png, png/29_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 11, payA1: 59, probA2: 5, payA2: 58, probA3: 8, payA3: 50, probA4: 38, payA4: 45, probA5: 26, payA5: 38, probA6: 10, payA6: 15, probA7: 2, payA7: 2 }, J: {probB1: 3, payB1: 111, probB2: 12, payB2: 62, probB3: 5, payB3: 55, probB4: 15, payB4: 43, probB5: 25, payB5: 26, probB6: 23, payB6: 21, probB7: 17, payB7: 2 } },
+    { stimulus: 'png/30_optionA_complex.png, png/30_optionB_complex.png', data: { test_part: 'cc', skew: 'lr' }, F: {probA1: 11, payA1: 58, probA2: 26, payA2: 55, probA3: 14, payA3: 52, probA4: 21, payA4: 41, probA5: 17, payA5: 24, probA6: 9, payA6: 11, probA7: 2, payA7: 4 }, J: {probB1: 8, payB1: 79, probB2: 9, payB2: 76, probB3: 19, payB3: 29, probB4: 25, payB4: 28, probB5: 16, payB5: 22, probB6: 10, payB6: 16, probB7: 13, payB7: 5 } },
+    { stimulus: 'png/31_optionA_complex.png, png/31_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 11, payA1: 180, probA2: 13, payA2: 142, probA3: 15, payA3: 127, probA4: 18, payA4: 121, probA5: 16, payA5: 59, probA6: 8, payA6: 17, probA7: 19, payA7: 11 }, J: {probB1: 19, payB1: 180, probB2: 10, payB2: 133, probB3: 20, payB3: 119, probB4: 17, payB4: 100, probB5: 11, payB5: 84, probB6: 8, payB6: 46, probB7: 15, payB7: 7 } },
+    { stimulus: 'png/32_optionA_complex.png, png/32_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 9, payA1: 76, probA2: 10, payA2: 73, probA3: 20, payA3: 38, probA4: 16, payA4: 37, probA5: 19, payA5: 35, probA6: 18, payA6: 15, probA7: 8, payA7: 10 }, J: {probB1: 20, payB1: 83, probB2: 8, payB2: 81, probB3: 17, payB3: 44, probB4: 11, payB4: 39, probB5: 13, payB5: 32, probB6: 19, payB6: 28, probB7: 12, payB7: 27 } },
+    { stimulus: 'png/33_optionA_complex.png, png/33_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 8, payA1: 141, probA2: 20, payA2: 137, probA3: 11, payA3: 117, probA4: 14, payA4: 111, probA5: 13, payA5: 83, probA6: 19, payA6: 81, probA7: 15, payA7: 67 }, J: {probB1: 8, payB1: 130, probB2: 20, payB2: 128, probB3: 18, payB3: 121, probB4: 15, payB4: 114, probB5: 11, payB5: 110, probB6: 19, payB6: 94, probB7: 9, payB7: 89 } },
+    { stimulus: 'png/34_optionA_complex.png, png/34_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 15, payA1: 107, probA2: 18, payA2: 98, probA3: 9, payA3: 61, probA4: 13, payA4: 27, probA5: 20, payA5: 22, probA6: 17, payA6: 7, probA7: 8, payA7: 3 }, J: {probB1: 20, payB1: 106, probB2: 18, payB2: 94, probB3: 10, payB3: 80, probB4: 8, payB4: 70, probB5: 19, payB5: 48, probB6: 12, payB6: 41, probB7: 13, payB7: 22 } },
+    { stimulus: 'png/35_optionA_complex.png, png/35_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 11, payA1: 98, probA2: 20, payA2: 85, probA3: 16, payA3: 69, probA4: 15, payA4: 54, probA5: 12, payA5: 33, probA6: 8, payA6: 25, probA7: 18, payA7: 5 }, J: {probB1: 14, payB1: 119, probB2: 20, payB2: 99, probB3: 11, payB3: 98, probB4: 8, payB4: 65, probB5: 19, payB5: 56, probB6: 13, payB6: 43, probB7: 15, payB7: 33 } },
+    { stimulus: 'png/36_optionA_complex.png, png/36_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 16, payA1: 80, probA2: 18, payA2: 57, probA3: 8, payA3: 48, probA4: 17, payA4: 37, probA5: 12, payA5: 34, probA6: 20, payA6: 29, probA7: 9, payA7: 12 }, J: {probB1: 17, payB1: 105, probB2: 20, payB2: 101, probB3: 12, payB3: 72, probB4: 13, payB4: 68, probB5: 8, payB5: 33, probB6: 14, payB6: 23, probB7: 16, payB7: 21 } },
+    { stimulus: 'png/37_optionA_complex.png, png/37_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 9, payA1: 103, probA2: 18, payA2: 99, probA3: 11, payA3: 98, probA4: 19, payA4: 84, probA5: 20, payA5: 75, probA6: 15, payA6: 57, probA7: 8, payA7: 44 }, J: {probB1: 16, payB1: 88, probB2: 15, payB2: 80, probB3: 14, payB3: 73, probB4: 17, payB4: 67, probB5: 20, payB5: 44, probB6: 10, payB6: 33, probB7: 8, payB7: 14 } },
+    { stimulus: 'png/38_optionA_complex.png, png/38_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 19, payA1: 142, probA2: 11, payA2: 124, probA3: 20, payA3: 108, probA4: 12, payA4: 86, probA5: 14, payA5: 47, probA6: 16, payA6: 41, probA7: 8, payA7: 28 }, J: {probB1: 17, payB1: 128, probB2: 8, payB2: 111, probB3: 15, payB3: 82, probB4: 16, payB4: 67, probB5: 11, payB5: 47, probB6: 14, payB6: 44, probB7: 19, payB7: 15 } },
+    { stimulus: 'png/39_optionA_complex.png, png/39_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 19, payA1: 180, probA2: 15, payA2: 177, probA3: 8, payA3: 158, probA4: 17, payA4: 105, probA5: 18, payA5: 89, probA6: 14, payA6: 59, probA7: 9, payA7: 43 }, J: {probB1: 15, payB1: 162, probB2: 19, payB2: 154, probB3: 16, payB3: 135, probB4: 18, payB4: 92, probB5: 10, payB5: 52, probB6: 14, payB6: 17, probB7: 8, payB7: 15 } },
+    { stimulus: 'png/40_optionA_complex.png, png/40_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 16, payA1: 119, probA2: 15, payA2: 87, probA3: 8, payA3: 72, probA4: 10, payA4: 59, probA5: 14, payA5: 53, probA6: 20, payA6: 44, probA7: 17, payA7: 13 }, J: {probB1: 16, payB1: 77, probB2: 18, payB2: 71, probB3: 10, payB3: 57, probB4: 12, payB4: 52, probB5: 17, payB5: 47, probB6: 8, payB6: 39, probB7: 19, payB7: 21 } },
+    { stimulus: 'png/41_optionA_complex.png, png/41_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 17, payA1: 99, probA2: 8, payA2: 87, probA3: 11, payA3: 85, probA4: 15, payA4: 83, probA5: 19, payA5: 55, probA6: 20, payA6: 33, probA7: 10, payA7: 28 }, J: {probB1: 18, payB1: 92, probB2: 20, payB2: 62, probB3: 15, payB3: 52, probB4: 16, payB4: 46, probB5: 12, payB5: 40, probB6: 11, payB6: 39, probB7: 8, payB7: 31 } },
+    { stimulus: 'png/42_optionA_complex.png, png/42_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 18, payA1: 87, probA2: 9, payA2: 72, probA3: 19, payA3: 63, probA4: 16, payA4: 50, probA5: 10, payA5: 37, probA6: 20, payA6: 31, probA7: 8, payA7: 24 }, J: {probB1: 17, payB1: 89, probB2: 9, payB2: 73, probB3: 19, payB3: 44, probB4: 8, payB4: 43, probB5: 20, payB5: 27, probB6: 13, payB6: 24, probB7: 14, payB7: 11 } },
+    { stimulus: 'png/43_optionA_complex.png, png/43_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 8, payA1: 114, probA2: 10, payA2: 94, probA3: 17, payA3: 91, probA4: 12, payA4: 83, probA5: 15, payA5: 77, probA6: 18, payA6: 48, probA7: 20, payA7: 44 }, J: {probB1: 13, payB1: 147, probB2: 14, payB2: 102, probB3: 20, payB3: 81, probB4: 16, payB4: 67, probB5: 8, payB5: 55, probB6: 10, payB6: 44, probB7: 19, payB7: 21 } },
+    { stimulus: 'png/44_optionA_complex.png, png/44_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 10, payA1: 100, probA2: 16, payA2: 65, probA3: 18, payA3: 63, probA4: 8, payA4: 59, probA5: 20, payA5: 31, probA6: 19, payA6: 11, probA7: 9, payA7: 5 }, J: {probB1: 9, payB1: 67, probB2: 20, payB2: 60, probB3: 18, payB3: 56, probB4: 8, payB4: 52, probB5: 14, payB5: 38, probB6: 19, payB6: 26, probB7: 12, payB7: 23 } },
+    { stimulus: 'png/45_optionA_complex.png, png/45_optionB_complex.png', data: { test_part: 'cc', skew: 'ns' }, F: {probA1: 8, payA1: 37, probA2: 14, payA2: 36, probA3: 12, payA3: 29, probA4: 17, payA4: 22, probA5: 20, payA5: 21, probA6: 16, payA6: 18, probA7: 13, payA7: 4 }, J: {probB1: 20, payB1: 40, probB2: 16, payB2: 34, probB3: 8, payB3: 27, probB4: 9, payB4: 25, probB5: 14, payB5: 18, probB6: 15, payB6: 13, probB7: 18, payB7: 2 } }
+        ]
+
+    var stimuli_diff = [
+        { stimulus: 'png/1_optionA_complex_ct.png, png/1_optionB_simple_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 11, payA1: 89, probA2: 16, payA2: 72, probA3: 18, payA3: 57, probA4: 14, payA4: 29, probA5: 13, payA5: 26, probA6: 20, payA6: 21, probA7: 8, payA7: 12 }, J: {probB1: 79, payB1: 15, probB2: 21, payB2: 59 } },
+ { stimulus: 'png/2_optionA_complex_ct.png, png/2_optionB_simple_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 16, payA1: 106, probA2: 10, payA2: 75, probA3: 8, payA3: 69, probA4: 14, payA4: 61, probA5: 15, payA5: 58, probA6: 20, payA6: 47, probA7: 17, payA7: 9 }, J: {probB1: 41, payB1: 78, probB2: 59, payB2: 9 } },
+ { stimulus: 'png/3_optionA_complex_ct.png, png/3_optionB_simple_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 18, payA1: 36, probA2: 17, payA2: 32, probA3: 16, payA3: 31, probA4: 10, payA4: 29, probA5: 12, payA5: 23, probA6: 19, payA6: 21, probA7: 8, payA7: 7 }, J: {probB1: 59, payB1: 64, probB2: 41, payB2: 24 } },
+ { stimulus: 'png/4_optionA_complex_ct.png, png/4_optionB_simple_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 11, payA1: 168, probA2: 18, payA2: 161, probA3: 8, payA3: 149, probA4: 20, payA4: 106, probA5: 15, payA5: 52, probA6: 16, payA6: 29, probA7: 12, payA7: 21 }, J: {probB1: 22, payB1: 73, probB2: 78, payB2: 127 } },
+ { stimulus: 'png/1_optionA_simple_ct.png, png/1_optionB_complex_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 53, payA1: 61, probA2: 47, payA2: 25 }, J: {probB1: 17, payB1: 44, probB2: 11, payB2: 42, probB3: 20, payB3: 27, probB4: 12, payB4: 26, probB5: 13, payB5: 24, probB6: 9, payB6: 3, probB7: 18, payB7: 2 } },
+ { stimulus: 'png/2_optionA_simple_ct.png, png/2_optionB_complex_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 47, payA1: 22, probA2: 53, payA2: 90 }, J: {probB1: 20, payB1: 67, probB2: 18, payB2: 58, probB3: 8, payB3: 57, probB4: 14, payB4: 47, probB5: 16, payB5: 11, probB6: 13, payB6: 3, probB7: 11, payB7: 2 } },
+ { stimulus: 'png/3_optionA_simple_ct.png, png/3_optionB_complex_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 70, payA1: 14, probA2: 30, payA2: 57 }, J: {probB1: 16, payB1: 86, probB2: 14, payB2: 66, probB3: 11, payB3: 58, probB4: 19, payB4: 52, probB5: 17, payB5: 22, probB6: 8, payB6: 21, probB7: 15, payB7: 19 } },
+ { stimulus: 'png/4_optionA_simple_ct.png, png/4_optionB_complex_ct.png', data: { test_part: 'sc', skew: 'cn' }, F: {probA1: 38, payA1: 67, probA2: 62, payA2: 113 }, J: {probB1: 9, payB1: 152, probB2: 11, payB2: 145, probB3: 15, payB3: 137, probB4: 19, payB4: 133, probB5: 18, payB5: 120, probB6: 8, payB6: 74, probB7: 20, payB7: 60 } },
+    { stimulus: 'png/1_optionA_simple.png, png/1_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 87, payA1: 75, probA2: 13, payA2: 149 }, J: {probB1: 30, payB1: 126, probB2: 11, payB2: 91, probB3: 8, payB3: 73, probB4: 18, payB4: 69, probB5: 19, payB5: 66, probB6: 9, payB6: 53, probB7: 5, payB7: 25 } },
+ { stimulus: 'png/2_optionA_simple.png, png/2_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 91, payA1: 97, probA2: 9, payA2: 134 }, J: {probB1: 31, payB1: 137, probB2: 15, payB2: 133, probB3: 12, payB3: 97, probB4: 8, payB4: 90, probB5: 26, payB5: 67, probB6: 6, payB6: 34, probB7: 2, payB7: 2 } },
+ { stimulus: 'png/3_optionA_simple.png, png/3_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 86, payA1: 52, probA2: 14, payA2: 116 }, J: {probB1: 28, payB1: 116, probB2: 7, payB2: 86, probB3: 21, payB3: 53, probB4: 11, payB4: 40, probB5: 18, payB5: 26, probB6: 12, payB6: 12, probB7: 2, payB7: 10 } },
+ { stimulus: 'png/4_optionA_simple.png, png/4_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 82, payA1: 89, probA2: 18, payA2: 195 }, J: {probB1: 28, payB1: 180, probB2: 10, payB2: 140, probB3: 30, payB3: 106, probB4: 9, payB4: 104, probB5: 7, payB5: 93, probB6: 14, payB6: 30, probB7: 2, payB7: 27 } },
+ { stimulus: 'png/5_optionA_simple.png, png/5_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 83, payA1: 130, probA2: 17, payA2: 187 }, J: {probB1: 9, payB1: 180, probB2: 30, payB2: 176, probB3: 13, payB3: 155, probB4: 7, payB4: 152, probB5: 4, payB5: 151, probB6: 34, payB6: 119, probB7: 3, payB7: 90 } },
+ { stimulus: 'png/6_optionA_simple.png, png/6_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 81, payA1: 66, probA2: 19, payA2: 108 }, J: {probB1: 10, payB1: 180, probB2: 25, payB2: 167, probB3: 4, payB3: 73, probB4: 14, payB4: 58, probB5: 23, payB5: 42, probB6: 22, payB6: 17, probB7: 2, payB7: 6 } },
+ { stimulus: 'png/7_optionA_simple.png, png/7_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 87, payA1: 48, probA2: 13, payA2: 115 }, J: {probB1: 6, payB1: 145, probB2: 12, payB2: 128, probB3: 10, payB3: 99, probB4: 40, payB4: 80, probB5: 15, payB5: 58, probB6: 13, payB6: 11, probB7: 4, payB7: 7 } },
+ { stimulus: 'png/8_optionA_simple.png, png/8_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 86, payA1: 72, probA2: 14, payA2: 199 }, J: {probB1: 17, payB1: 180, probB2: 24, payB2: 157, probB3: 3, payB3: 155, probB4: 19, payB4: 122, probB5: 10, payB5: 42, probB6: 25, payB6: 38, probB7: 2, payB7: 23 } },
+ { stimulus: 'png/9_optionA_simple.png, png/9_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 83, payA1: 59, probA2: 17, payA2: 138 }, J: {probB1: 18, payB1: 134, probB2: 22, payB2: 109, probB3: 35, payB3: 100, probB4: 3, payB4: 77, probB5: 8, payB5: 65, probB6: 12, payB6: 17, probB7: 2, payB7: 9 } },
+ { stimulus: 'png/10_optionA_simple.png, png/10_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 12, payA1: 163, probA2: 88, payA2: 58 }, J: {probB1: 4, payB1: 69, probB2: 28, payB2: 62, probB3: 22, payB3: 60, probB4: 23, payB4: 47, probB5: 10, payB5: 30, probB6: 11, payB6: 25, probB7: 2, payB7: 16 } },
+ { stimulus: 'png/11_optionA_simple.png, png/11_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 83, payA1: 115, probA2: 17, payA2: 197 }, J: {probB1: 31, payB1: 137, probB2: 5, payB2: 134, probB3: 23, payB3: 126, probB4: 25, payB4: 106, probB5: 8, payB5: 30, probB6: 6, payB6: 29, probB7: 2, payB7: 25 } },
+ { stimulus: 'png/12_optionA_simple.png, png/12_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 18, payA1: 170, probA2: 82, payA2: 94 }, J: {probB1: 3, payB1: 174, probB2: 4, payB2: 169, probB3: 36, payB3: 141, probB4: 9, payB4: 77, probB5: 19, payB5: 63, probB6: 27, payB6: 23, probB7: 2, payB7: 13 } },
+ { stimulus: 'png/13_optionA_simple.png, png/13_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 88, payA1: 93, probA2: 12, payA2: 192 }, J: {probB1: 14, payB1: 146, probB2: 4, payB2: 137, probB3: 40, payB3: 114, probB4: 6, payB4: 81, probB5: 10, payB5: 79, probB6: 23, payB6: 46, probB7: 3, payB7: 21 } },
+ { stimulus: 'png/14_optionA_simple.png, png/14_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 18, payA1: 167, probA2: 82, payA2: 99 }, J: {probB1: 16, payB1: 158, probB2: 10, payB2: 151, probB3: 30, payB3: 101, probB4: 23, payB4: 88, probB5: 4, payB5: 74, probB6: 15, payB6: 46, probB7: 2, payB7: 5 } },
+ { stimulus: 'png/15_optionA_simple.png, png/15_optionB_complex.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 81, payA1: 108, probA2: 19, payA2: 193 }, J: {probB1: 20, payB1: 180, probB2: 10, payB2: 156, probB3: 9, payB3: 139, probB4: 22, payB4: 89, probB5: 17, payB5: 86, probB6: 14, payB6: 84, probB7: 8, payB7: 49 } },
+ { stimulus: 'png/16_optionA_simple.png, png/16_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 87, payA1: 97, probA2: 13, payA2: 38 }, J: {probB1: 2, payB1: 153, probB2: 14, payB2: 116, probB3: 7, payB3: 114, probB4: 36, payB4: 96, probB5: 16, payB5: 90, probB6: 12, payB6: 55, probB7: 13, payB7: 48 } },
+ { stimulus: 'png/17_optionA_simple.png, png/17_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 91, payA1: 52, probA2: 9, payA2: 18 }, J: {probB1: 2, payB1: 170, probB2: 7, payB2: 156, probB3: 9, payB3: 69, probB4: 4, payB4: 55, probB5: 34, payB5: 44, probB6: 26, payB6: 30, probB7: 18, payB7: 20 } },
+ { stimulus: 'png/18_optionA_simple.png, png/18_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 86, payA1: 79, probA2: 14, payA2: 27 }, J: {probB1: 2, payB1: 137, probB2: 24, payB2: 121, probB3: 4, payB3: 86, probB4: 32, payB4: 64, probB5: 8, payB5: 56, probB6: 14, payB6: 44, probB7: 16, payB7: 35 } },
+ { stimulus: 'png/19_optionA_simple.png, png/19_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 82, payA1: 98, probA2: 18, payA2: 11 }, J: {probB1: 2, payB1: 179, probB2: 9, payB2: 169, probB3: 28, payB3: 98, probB4: 11, payB4: 94, probB5: 19, payB5: 79, probB6: 13, payB6: 76, probB7: 17, payB7: 57 } },
+ { stimulus: 'png/20_optionA_simple.png, png/20_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 83, payA1: 60, probA2: 17, payA2: 9 }, J: {probB1: 2, payB1: 150, probB2: 22, payB2: 107, probB3: 5, payB3: 87, probB4: 7, payB4: 78, probB5: 19, payB5: 50, probB6: 18, payB6: 39, probB7: 27, payB7: 30 } },
+ { stimulus: 'png/21_optionA_simple.png, png/21_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 81, payA1: 134, probA2: 19, payA2: 48 }, J: {probB1: 2, payB1: 180, probB2: 14, payB2: 151, probB3: 32, payB3: 137, probB4: 6, payB4: 123, probB5: 3, payB5: 118, probB6: 35, payB6: 110, probB7: 8, payB7: 106 } },
+ { stimulus: 'png/22_optionA_simple.png, png/22_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 87, payA1: 107, probA2: 13, payA2: 3 }, J: {probB1: 4, payB1: 180, probB2: 10, payB2: 157, probB3: 17, payB3: 141, probB4: 20, payB4: 127, probB5: 12, payB5: 105, probB6: 8, payB6: 87, probB7: 28, payB7: 74 } },
+ { stimulus: 'png/23_optionA_simple.png, png/23_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 86, payA1: 95, probA2: 14, payA2: 9 }, J: {probB1: 4, payB1: 180, probB2: 12, payB2: 129, probB3: 20, payB3: 121, probB4: 5, payB4: 120, probB5: 24, payB5: 105, probB6: 9, payB6: 98, probB7: 26, payB7: 60 } },
+ { stimulus: 'png/24_optionA_simple.png, png/24_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 83, payA1: 108, probA2: 17, payA2: 25 }, J: {probB1: 3, payB1: 180, probB2: 10, payB2: 156, probB3: 9, payB3: 144, probB4: 8, payB4: 141, probB5: 31, payB5: 106, probB6: 17, payB6: 105, probB7: 22, payB7: 83 } },
+ { stimulus: 'png/25_optionA_simple.png, png/25_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 12, payA1: 2, probA2: 88, payA2: 77 }, J: {probB1: 2, payB1: 122, probB2: 13, payB2: 94, probB3: 23, payB3: 49, probB4: 37, payB4: 46, probB5: 3, payB5: 43, probB6: 10, payB6: 28, probB7: 12, payB7: 5 } },
+ { stimulus: 'png/26_optionA_simple.png, png/26_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 83, payA1: 91, probA2: 17, payA2: 46 }, J: {probB1: 2, payB1: 115, probB2: 8, payB2: 84, probB3: 18, payB3: 76, probB4: 23, payB4: 65, probB5: 37, payB5: 56, probB6: 3, payB6: 45, probB7: 9, payB7: 38 } },
+ { stimulus: 'png/27_optionA_simple.png, png/27_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 18, payA1: 23, probA2: 82, payA2: 74 }, J: {probB1: 2, payB1: 131, probB2: 4, payB2: 100, probB3: 11, payB3: 78, probB4: 28, payB4: 62, probB5: 19, payB5: 48, probB6: 7, payB6: 18, probB7: 28, payB7: 6 } },
+ { stimulus: 'png/28_optionA_simple.png, png/28_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 88, payA1: 87, probA2: 12, payA2: 11 }, J: {probB1: 2, payB1: 169, probB2: 8, payB2: 138, probB3: 22, payB3: 98, probB4: 28, payB4: 56, probB5: 18, payB5: 46, probB6: 12, payB6: 39, probB7: 9, payB7: 29 } },
+ { stimulus: 'png/29_optionA_simple.png, png/29_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 18, payA1: 10, probA2: 82, payA2: 49 }, J: {probB1: 3, payB1: 111, probB2: 12, payB2: 62, probB3: 5, payB3: 55, probB4: 15, payB4: 43, probB5: 25, payB5: 26, probB6: 23, payB6: 21, probB7: 17, payB7: 2 } },
+ { stimulus: 'png/30_optionA_simple.png, png/30_optionB_complex.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 81, payA1: 49, probA2: 19, payA2: 9 }, J: {probB1: 8, payB1: 79, probB2: 9, payB2: 76, probB3: 19, payB3: 29, probB4: 25, payB4: 28, probB5: 16, payB5: 22, probB6: 10, payB6: 16, probB7: 13, payB7: 5 } },
+ { stimulus: 'png/31_optionA_simple.png, png/31_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 44, payA1: 18, probA2: 56, payA2: 151 }, J: {probB1: 19, payB1: 180, probB2: 10, payB2: 133, probB3: 20, payB3: 119, probB4: 17, payB4: 100, probB5: 11, payB5: 84, probB6: 8, payB6: 46, probB7: 15, payB7: 7 } },
+ { stimulus: 'png/32_optionA_simple.png, png/32_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 36, payA1: 84, probA2: 64, payA2: 12 }, J: {probB1: 20, payB1: 83, probB2: 8, payB2: 81, probB3: 17, payB3: 44, probB4: 11, payB4: 39, probB5: 13, payB5: 32, probB6: 19, payB6: 28, probB7: 12, payB7: 27 } },
+ { stimulus: 'png/33_optionA_simple.png, png/33_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 45, payA1: 182, probA2: 55, payA2: 39 }, J: {probB1: 8, payB1: 130, probB2: 20, payB2: 128, probB3: 18, payB3: 121, probB4: 15, payB4: 114, probB5: 11, payB5: 110, probB6: 19, payB6: 94, probB7: 9, payB7: 89 } },
+ { stimulus: 'png/34_optionA_simple.png, png/34_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 57, payA1: 24, probA2: 42, payA2: 82 }, J: {probB1: 20, payB1: 106, probB2: 18, payB2: 94, probB3: 10, payB3: 80, probB4: 8, payB4: 70, probB5: 19, payB5: 48, probB6: 12, payB6: 41, probB7: 13, payB7: 22 } },
+ { stimulus: 'png/35_optionA_simple.png, png/35_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 62, payA1: 78, probA2: 38, payA2: 14 }, J: {probB1: 14, payB1: 119, probB2: 20, payB2: 99, probB3: 11, payB3: 98, probB4: 8, payB4: 65, probB5: 19, payB5: 56, probB6: 13, payB6: 43, probB7: 15, payB7: 33 } },
+ { stimulus: 'png/36_optionA_simple.png, png/36_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 60, payA1: 65, probA2: 40, payA2: 13 }, J: {probB1: 17, payB1: 105, probB2: 20, payB2: 101, probB3: 12, payB3: 72, probB4: 13, payB4: 68, probB5: 8, payB5: 33, probB6: 14, payB6: 23, probB7: 16, payB7: 21 } },
+ { stimulus: 'png/37_optionA_simple.png, png/37_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 41, payA1: 19, probA2: 59, payA2: 124 }, J: {probB1: 16, payB1: 88, probB2: 15, payB2: 80, probB3: 14, payB3: 73, probB4: 17, payB4: 67, probB5: 20, payB5: 44, probB6: 10, payB6: 33, probB7: 8, payB7: 14 } },
+ { stimulus: 'png/38_optionA_simple.png, png/38_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 62, payA1: 47, probA2: 38, payA2: 155 }, J: {probB1: 17, payB1: 128, probB2: 8, payB2: 111, probB3: 15, payB3: 82, probB4: 16, payB4: 67, probB5: 11, payB5: 47, probB6: 14, payB6: 44, probB7: 19, payB7: 15 } },
+ { stimulus: 'png/39_optionA_simple.png, png/39_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 62, payA1: 180, probA2: 38, payA2: 23 }, J: {probB1: 15, payB1: 162, probB2: 19, payB2: 154, probB3: 16, payB3: 135, probB4: 18, payB4: 92, probB5: 10, payB5: 52, probB6: 14, payB6: 17, probB7: 8, payB7: 15 } },
+ { stimulus: 'png/40_optionA_simple.png, png/40_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 44, payA1: 89, probA2: 56, payA2: 41 }, J: {probB1: 16, payB1: 77, probB2: 18, payB2: 71, probB3: 10, payB3: 57, probB4: 12, payB4: 52, probB5: 17, payB5: 47, probB6: 8, payB6: 39, probB7: 19, payB7: 21 } },
+ { stimulus: 'png/41_optionA_simple.png, png/41_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 30, payA1: 43, probA2: 70, payA2: 75 }, J: {probB1: 18, payB1: 92, probB2: 20, payB2: 62, probB3: 15, payB3: 52, probB4: 16, payB4: 46, probB5: 12, payB5: 40, probB6: 11, payB6: 39, probB7: 8, payB7: 31 } },
+ { stimulus: 'png/42_optionA_simple.png, png/42_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 37, payA1: 119, probA2: 63, payA2: 16 }, J: {probB1: 17, payB1: 89, probB2: 9, payB2: 73, probB3: 19, payB3: 44, probB4: 8, payB4: 43, probB5: 20, payB5: 27, probB6: 13, payB6: 24, probB7: 14, payB7: 11 } },
+ { stimulus: 'png/43_optionA_simple.png, png/43_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 46, payA1: 93, probA2: 54, payA2: 56 }, J: {probB1: 13, payB1: 147, probB2: 14, payB2: 102, probB3: 20, payB3: 81, probB4: 16, payB4: 67, probB5: 8, payB5: 55, probB6: 10, payB6: 44, probB7: 19, payB7: 21 } },
+ { stimulus: 'png/44_optionA_simple.png, png/44_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 56, payA1: 28, probA2: 43, payA2: 68 }, J: {probB1: 9, payB1: 67, probB2: 20, payB2: 60, probB3: 18, payB3: 56, probB4: 8, payB4: 52, probB5: 14, payB5: 38, probB6: 19, payB6: 26, probB7: 12, payB7: 23 } },
+ { stimulus: 'png/45_optionA_simple.png, png/45_optionB_complex.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 56, payA1: 3, probA2: 44, payA2: 48 }, J: {probB1: 20, payB1: 40, probB2: 16, payB2: 34, probB3: 8, payB3: 27, probB4: 9, payB4: 25, probB5: 14, payB5: 18, probB6: 15, payB6: 13, probB7: 18, payB7: 2 } }   ,
+ { stimulus: 'png/1_optionA_complex.png, png/1_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 3, payA1: 180, probA2: 8, payA2: 168, probA3: 20, payA3: 119, probA4: 9, payA4: 103, probA5: 16, payA5: 77, probA6: 17, payA6: 60, probA7: 27, payA7: 36 }, J: {probB1: 84, payB1: 89, probB2: 16, payB2: 61 } },
+ { stimulus: 'png/2_optionA_complex.png, png/2_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 3, payA2: 163, probA3: 19, payA3: 139, probA4: 8, payA4: 118, probA5: 18, payA5: 109, probA6: 21, payA6: 75, probA7: 28, payA7: 71 }, J: {probB1: 14, payB1: 87, probB2: 86, payB2: 103 } },
+ { stimulus: 'png/3_optionA_complex.png, png/3_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 4, payA2: 175, probA3: 9, payA3: 142, probA4: 5, payA4: 78, probA5: 39, payA5: 65, probA6: 19, payA6: 25, probA7: 22, payA7: 12 }, J: {probB1: 89, payB1: 66, probB2: 11, payB2: 28 } },
+ { stimulus: 'png/4_optionA_complex.png, png/4_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 161, probA2: 3, payA2: 160, probA3: 17, payA3: 157, probA4: 8, payA4: 141, probA5: 18, payA5: 124, probA6: 13, payA6: 98, probA7: 39, payA7: 71 }, J: {probB1: 12, payB1: 46, probB2: 88, payB2: 127 } },
+ { stimulus: 'png/5_optionA_complex.png, png/5_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 4, payA1: 180, probA2: 5, payA2: 163, probA3: 11, payA3: 162, probA4: 34, payA4: 138, probA5: 7, payA5: 136, probA6: 24, payA6: 132, probA7: 15, payA7: 120 }, J: {probB1: 96, payB1: 153, probB2: 4, payB2: 70 } },
+ { stimulus: 'png/6_optionA_complex.png, png/6_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 152, probA2: 3, payA2: 144, probA3: 23, payA3: 128, probA4: 4, payA4: 87, probA5: 33, payA5: 62, probA6: 8, payA6: 42, probA7: 27, payA7: 39 }, J: {probB1: 13, payB1: 68, probB2: 87, payB2: 87 } },
+ { stimulus: 'png/7_optionA_complex.png, png/7_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 173, probA2: 19, payA2: 128, probA3: 7, payA3: 78, probA4: 6, payA4: 65, probA5: 14, payA5: 38, probA6: 28, payA6: 37, probA7: 24, payA7: 17 }, J: {probB1: 17, payB1: 58, probB2: 83, payB2: 80 } },
+ { stimulus: 'png/8_optionA_complex.png, png/8_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 6, payA2: 169, probA3: 3, payA3: 149, probA4: 36, payA4: 117, probA5: 17, payA5: 112, probA6: 4, payA6: 37, probA7: 32, payA7: 27 }, J: {probB1: 16, payB1: 19, probB2: 84, payB2: 128 } },
+ { stimulus: 'png/9_optionA_complex.png, png/9_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 175, probA2: 4, payA2: 153, probA3: 32, payA3: 90, probA4: 12, payA4: 71, probA5: 20, payA5: 59, probA6: 8, payA6: 52, probA7: 22, payA7: 44 }, J: {probB1: 86, payB1: 101, probB2: 14, payB2: 42 } },
+ { stimulus: 'png/10_optionA_complex.png, png/10_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 3, payA1: 173, probA2: 9, payA2: 159, probA3: 5, payA3: 86, probA4: 21, payA4: 79, probA5: 4, payA5: 73, probA6: 31, payA6: 49, probA7: 27, payA7: 45 }, J: {probB1: 17, payB1: 7, probB2: 83, payB2: 59 } },
+ { stimulus: 'png/11_optionA_complex.png, png/11_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 26, payA2: 159, probA3: 15, payA3: 141, probA4: 3, payA4: 125, probA5: 37, payA5: 115, probA6: 12, payA6: 104, probA7: 5, payA7: 68 }, J: {probB1: 7, payB1: 17, probB2: 93, payB2: 116 } },
+ { stimulus: 'png/12_optionA_complex.png, png/12_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 23, payA2: 134, probA3: 13, payA3: 131, probA4: 17, payA4: 112, probA5: 24, payA5: 88, probA6: 7, payA6: 80, probA7: 14, payA7: 73 }, J: {probB1: 12, payB1: 38, probB2: 88, payB2: 95 } },
+ { stimulus: 'png/13_optionA_complex.png, png/13_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 3, payA1: 180, probA2: 6, payA2: 169, probA3: 9, payA3: 112, probA4: 30, payA4: 110, probA5: 4, payA5: 97, probA6: 28, payA6: 91, probA7: 19, payA7: 80 }, J: {probB1: 93, payB1: 100, probB2: 7, payB2: 31 } },
+ { stimulus: 'png/14_optionA_complex.png, png/14_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 15, payA2: 177, probA3: 3, payA3: 125, probA4: 39, payA4: 114, probA5: 6, payA5: 90, probA6: 9, payA6: 86, probA7: 26, payA7: 73 }, J: {probB1: 19, payB1: 59, probB2: 81, payB2: 111 } },
+ { stimulus: 'png/15_optionA_complex.png, png/15_optionB_simple.png', data: { test_part: 'sc', skew: 'rl' }, F: {probA1: 2, payA1: 180, probA2: 7, payA2: 178, probA3: 13, payA3: 158, probA4: 16, payA4: 143, probA5: 8, payA5: 130, probA6: 17, payA6: 101, probA7: 37, payA7: 100 }, J: {probB1: 17, payB1: 63, probB2: 83, payB2: 125 } },
+ { stimulus: 'png/16_optionA_complex.png, png/16_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 23, payA1: 136, probA2: 21, payA2: 116, probA3: 8, payA3: 106, probA4: 20, payA4: 95, probA5: 19, payA5: 25, probA6: 6, payA6: 18, probA7: 3, payA7: 16 }, J: {probB1: 84, payB1: 87, probB2: 16, payB2: 100 } },
+ { stimulus: 'png/17_optionA_complex.png, png/17_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 20, payA1: 63, probA2: 7, payA2: 58, probA3: 5, payA3: 56, probA4: 36, payA4: 49, probA5: 15, payA5: 46, probA6: 13, payA6: 35, probA7: 4, payA7: 7 }, J: {probB1: 14, payB1: 62, probB2: 86, payB2: 47 } },
+ { stimulus: 'png/18_optionA_complex.png, png/18_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 21, payA1: 106, probA2: 35, payA2: 93, probA3: 14, payA3: 53, probA4: 10, payA4: 52, probA5: 5, payA5: 29, probA6: 13, payA6: 20, probA7: 2, payA7: 7 }, J: {probB1: 89, payB1: 69, probB2: 11, payB2: 96 } },
+ { stimulus: 'png/19_optionA_complex.png, png/19_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 11, payA1: 114, probA2: 34, payA2: 111, probA3: 22, payA3: 85, probA4: 4, payA4: 61, probA5: 16, payA5: 52, probA6: 10, payA6: 24, probA7: 3, payA7: 15 }, J: {probB1: 12, payB1: 143, probB2: 88, payB2: 85 } },
+ { stimulus: 'png/20_optionA_complex.png, png/20_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 34, payA1: 67, probA2: 17, payA2: 61, probA3: 15, payA3: 56, probA4: 20, payA4: 31, probA5: 9, payA5: 27, probA6: 3, payA6: 26, probA7: 2, payA7: 10 }, J: {probB1: 96, payB1: 58, probB2: 4, payB2: 130 } },
+ { stimulus: 'png/21_optionA_complex.png, png/21_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 26, payA1: 141, probA2: 28, payA2: 138, probA3: 23, payA3: 107, probA4: 4, payA4: 105, probA5: 13, payA5: 81, probA6: 3, payA6: 35, probA7: 2, payA7: 14 }, J: {probB1: 13, payB1: 189, probB2: 87, payB2: 118 } },
+ { stimulus: 'png/22_optionA_complex.png, png/22_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 34, payA1: 107, probA2: 22, payA2: 106, probA3: 9, payA3: 95, probA4: 6, payA4: 93, probA5: 15, payA5: 88, probA6: 12, payA6: 52, probA7: 2, payA7: 12 }, J: {probB1: 17, payB1: 157, probB2: 83, payB2: 104 } },
+ { stimulus: 'png/23_optionA_complex.png, png/23_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 10, payA1: 110, probA2: 34, payA2: 106, probA3: 3, payA3: 88, probA4: 28, payA4: 86, probA5: 4, payA5: 63, probA6: 19, payA6: 32, probA7: 2, payA7: 26 }, J: {probB1: 16, payB1: 159, probB2: 84, payB2: 92 } },
+ { stimulus: 'png/24_optionA_complex.png, png/24_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 5, payA1: 136, probA2: 24, payA2: 124, probA3: 8, payA3: 114, probA4: 9, payA4: 108, probA5: 28, payA5: 89, probA6: 21, payA6: 57, probA7: 4, payA7: 14 }, J: {probB1: 86, payB1: 106, probB2: 14, payB2: 166 } },
+ { stimulus: 'png/25_optionA_complex.png, png/25_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 28, payA1: 107, probA2: 6, payA2: 91, probA3: 16, payA3: 81, probA4: 18, payA4: 53, probA5: 19, payA5: 33, probA6: 7, payA6: 27, probA7: 5, payA7: 19 }, J: {probB1: 17, payB1: 69, probB2: 83, payB2: 43 } },
+ { stimulus: 'png/26_optionA_complex.png, png/26_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 20, payA1: 119, probA2: 22, payA2: 105, probA3: 10, payA3: 99, probA4: 7, payA4: 76, probA5: 11, payA5: 61, probA6: 28, payA6: 50, probA7: 2, payA7: 31 }, J: {probB1: 7, payB1: 108, probB2: 93, payB2: 60 } },
+ { stimulus: 'png/27_optionA_complex.png, png/27_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 39, payA1: 86, probA2: 10, payA2: 72, probA3: 21, payA3: 71, probA4: 6, payA4: 44, probA5: 12, payA5: 36, probA6: 9, payA6: 25, probA7: 3, payA7: 3 }, J: {probB1: 12, payB1: 70, probB2: 88, payB2: 42 } },
+ { stimulus: 'png/28_optionA_complex.png, png/28_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 5, payA1: 139, probA2: 11, payA2: 131, probA3: 9, payA3: 129, probA4: 32, payA4: 72, probA5: 21, payA5: 70, probA6: 19, payA6: 42, probA7: 3, payA7: 3 }, J: {probB1: 93, payB1: 65, probB2: 7, payB2: 104 } },
+ { stimulus: 'png/29_optionA_complex.png, png/29_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 11, payA1: 59, probA2: 5, payA2: 58, probA3: 8, payA3: 50, probA4: 38, payA4: 45, probA5: 26, payA5: 38, probA6: 10, payA6: 15, probA7: 2, payA7: 2 }, J: {probB1: 19, payB1: 52, probB2: 81, payB2: 27 } },
+ { stimulus: 'png/30_optionA_complex.png, png/30_optionB_simple.png', data: { test_part: 'sc', skew: 'lr' }, F: {probA1: 11, payA1: 58, probA2: 26, payA2: 55, probA3: 14, payA3: 52, probA4: 21, payA4: 41, probA5: 17, payA5: 24, probA6: 9, payA6: 11, probA7: 2, payA7: 4 }, J: {probB1: 17, payB1: 44, probB2: 83, payB2: 29 } },
+ { stimulus: 'png/31_optionA_complex.png, png/31_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 11, payA1: 180, probA2: 13, payA2: 142, probA3: 15, payA3: 127, probA4: 18, payA4: 121, probA5: 16, payA5: 59, probA6: 8, payA6: 17, probA7: 19, payA7: 11 }, J: {probB1: 65, payB1: 141, probB2: 35, payB2: 33 } },
+ { stimulus: 'png/32_optionA_complex.png, png/32_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 9, payA1: 76, probA2: 10, payA2: 73, probA3: 20, payA3: 38, probA4: 16, payA4: 37, probA5: 19, payA5: 35, probA6: 18, payA6: 15, probA7: 8, payA7: 10 }, J: {probB1: 54, payB1: 20, probB2: 46, payB2: 80 } },
+ { stimulus: 'png/33_optionA_complex.png, png/33_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 8, payA1: 141, probA2: 20, payA2: 137, probA3: 11, payA3: 117, probA4: 14, payA4: 111, probA5: 13, payA5: 83, probA6: 19, payA6: 81, probA7: 15, payA7: 67 }, J: {probB1: 40, payB1: 188, probB2: 60, payB2: 63 } },
+ { stimulus: 'png/34_optionA_complex.png, png/34_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 15, payA1: 107, probA2: 18, payA2: 98, probA3: 9, payA3: 61, probA4: 13, payA4: 27, probA5: 20, payA5: 22, probA6: 17, payA6: 7, probA7: 8, payA7: 3 }, J: {probB1: 56, payB1: 57, probB2: 43, payB2: 84 } },
+ { stimulus: 'png/35_optionA_complex.png, png/35_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 11, payA1: 98, probA2: 20, payA2: 85, probA3: 16, payA3: 69, probA4: 15, payA4: 54, probA5: 12, payA5: 33, probA6: 8, payA6: 25, probA7: 18, payA7: 5 }, J: {probB1: 34, payB1: 38, probB2: 66, payB2: 92 } },
+ { stimulus: 'png/36_optionA_complex.png, png/36_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 16, payA1: 80, probA2: 18, payA2: 57, probA3: 8, payA3: 48, probA4: 17, payA4: 37, probA5: 12, payA5: 34, probA6: 20, payA6: 29, probA7: 9, payA7: 12 }, J: {probB1: 56, payB1: 78, probB2: 43, payB2: 47 } },
+ { stimulus: 'png/37_optionA_complex.png, png/37_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 9, payA1: 103, probA2: 18, payA2: 99, probA3: 11, payA3: 98, probA4: 19, payA4: 84, probA5: 20, payA5: 75, probA6: 15, payA6: 57, probA7: 8, payA7: 44 }, J: {probB1: 37, payB1: 13, probB2: 63, payB2: 89 } },
+ { stimulus: 'png/38_optionA_complex.png, png/38_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 19, payA1: 142, probA2: 11, payA2: 124, probA3: 20, payA3: 108, probA4: 12, payA4: 86, probA5: 14, payA5: 47, probA6: 16, payA6: 41, probA7: 8, payA7: 28 }, J: {probB1: 44, payB1: 121, probB2: 56, payB2: 26 } },
+ { stimulus: 'png/39_optionA_complex.png, png/39_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 19, payA1: 180, probA2: 15, payA2: 177, probA3: 8, payA3: 158, probA4: 17, payA4: 105, probA5: 18, payA5: 89, probA6: 14, payA6: 59, probA7: 9, payA7: 43 }, J: {probB1: 56, payB1: 159, probB2: 44, payB2: 26 } },
+ { stimulus: 'png/40_optionA_complex.png, png/40_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 16, payA1: 119, probA2: 15, payA2: 87, probA3: 8, payA3: 72, probA4: 10, payA4: 59, probA5: 14, payA5: 53, probA6: 20, payA6: 44, probA7: 17, payA7: 13 }, J: {probB1: 54, payB1: 60, probB2: 46, payB2: 43 } },
+ { stimulus: 'png/41_optionA_complex.png, png/41_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 17, payA1: 99, probA2: 8, payA2: 87, probA3: 11, payA3: 85, probA4: 15, payA4: 83, probA5: 19, payA5: 55, probA6: 20, payA6: 33, probA7: 10, payA7: 28 }, J: {probB1: 63, payB1: 63, probB2: 37, payB2: 43 } },
+ { stimulus: 'png/42_optionA_complex.png, png/42_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 18, payA1: 87, probA2: 9, payA2: 72, probA3: 19, payA3: 63, probA4: 16, payA4: 50, probA5: 10, payA5: 37, probA6: 20, payA6: 31, probA7: 8, payA7: 24 }, J: {probB1: 45, payB1: 87, probB2: 55, payB2: 8 } },
+ { stimulus: 'png/43_optionA_complex.png, png/43_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 8, payA1: 114, probA2: 10, payA2: 94, probA3: 17, payA3: 91, probA4: 12, payA4: 83, probA5: 15, payA5: 77, probA6: 18, payA6: 48, probA7: 20, payA7: 44 }, J: {probB1: 49, payB1: 69, probB2: 51, payB2: 77 } },
+ { stimulus: 'png/44_optionA_complex.png, png/44_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 10, payA1: 100, probA2: 16, payA2: 65, probA3: 18, payA3: 63, probA4: 8, payA4: 59, probA5: 20, payA5: 31, probA6: 19, payA6: 11, probA7: 9, payA7: 5 }, J: {probB1: 52, payB1: 59, probB2: 48, payB2: 30 } },
+ { stimulus: 'png/45_optionA_complex.png, png/45_optionB_simple.png', data: { test_part: 'sc', skew: 'ns' }, F: {probA1: 8, payA1: 37, probA2: 14, payA2: 36, probA3: 12, payA3: 29, probA4: 17, payA4: 22, probA5: 20, payA5: 21, probA6: 16, payA6: 18, probA7: 13, payA7: 4 }, J: {probB1: 47, payB1: 10, probB2: 53, payB2: 34 } }
+        ]
+
+        
+
+        
+
+
+
+
+    function handleKeyResponse(event) {
+    var data = jsPsych.getCurrentTrial().data;
+    if(event.key === 'f' || event.key === 'j') {
+
+         // Remove the event listener to prevent multiple responses
+         document.removeEventListener('keydown', handleKeyResponse);
+
+        // Record the time of the response
+        var responseTime = Date.now();
+        // Record the response
+        data.response = event.key;
+        data.test_chosen_option = event.key === 'f' ? 'optionA' : 'optionB';
+
+
+        // Generate feedback based on the response
+        var new_color1 = data.test_chosen_option === 'optionA' ? 'CornflowerBlue' : 'white';
+        var new_color2 = data.test_chosen_option === 'optionB' ? 'CornflowerBlue' : 'white';
+
+        var currentTrial = jsPsych.getCurrentTrial();
+        var optionAStimulus = currentTrial.optionA_Stimulus;
+        var optionBStimulus = currentTrial.optionB_Stimulus;
+       
+
+        var feedbackHtml = '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">' +
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        '<p>Please choose the option that you prefer.</p>' +
+        '<div style="display: flex; justify-content: space-between;">' +
+        '<div style="width: 70%;">' +
+        '<div id="optionA" class="option-container" style="background-color: ' + new_color1 + '; border: 0px solid black; width: 100%; padding: 10px;">' +
+        '<img style="width: 80%;" src="' + optionAStimulus + '" />' +
+        '</div>' +
+        '<p style="text-align: center;"><b>Press F to choose the left option</b></p>' +
+        '</div>' +
+        '<div style="width: 70%;">' +
+        '<div id="optionB" class="option-container" style="background-color: ' + new_color2 + ';border: 0px solid black; width: 100%; padding: 10px;">' +
+        '<img style="width: 80%;" src="' + optionBStimulus + '" />' +
+        '</div>' +
+        '<p style="text-align: center;"><b>Press J to choose the right option</b></p>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div style="margin-top: 20px; text-align: center; display: flex; flex-direction: column; align-items: center;">' +
+            '<div id="warningMessage" style="color: black; font-size: 20px; display: none; margin-bottom: 20px;">5 seconds left to make a decision</div>' +
+            '<button id="nextButton" style="display: none; color: black; font-size: 40px; align-self: center;" onclick="jsPsych.finishTrial()">Go to next trial</button>' +
+        '</div>'+
+        '</div>'; 
+
+        // Display the feedback
+        jsPsych.getDisplayElement().innerHTML = feedbackHtml;
+      
+            // Wait for the feedback to be displayed for a certain duration
+            setTimeout(function() {
+                        // Clear the display for the post-trial duration
+            jsPsych.getDisplayElement().innerHTML = '';
+
+            // Then wait for the post-trial duration before ending the trial
+            setTimeout(function() {
+
+                // Calculate reaction time
+                var rt = responseTime - trialStartTime;
+
+                // End the trial and include the reaction time in the data
+                jsPsych.finishTrial({ rt_trial: rt , feedback: feedbackHtml, after_warning: warningShown});
+                console.log(rt)
+            }, 800); // Post-trial duration 
+
+        }, 800); // Feedback display duration 
+    }
+}
+    var trialStartTime;
+    var warningShown = false;
+
+    var practrial = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+    // Split and shuffle the stimuli
+    var stimuli = jsPsych.timelineVariable('stimulus', true).split(",");
+
+    // Randomly determine riskIndex
+    var riskIndex = (Math.random() < 0.5) ? 1 : -1;
+    
+    // Decide order of stimuli based on riskIndex
+    var optionAStimulus, optionBStimulus;
+    if (riskIndex === 1) {
+        optionAStimulus = stimuli[0].trim();
+        optionBStimulus = stimuli[1].trim();
+    } else {
+        optionAStimulus = stimuli[1].trim();
+        optionBStimulus = stimuli[0].trim();
+    }
+
+    jsPsych.getCurrentTrial().risk_index = riskIndex;
+    jsPsych.getCurrentTrial().optionA_Stimulus = optionAStimulus;
+    jsPsych.getCurrentTrial().optionB_Stimulus = optionBStimulus;
+
+    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">' +
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        '<p>Please choose the option that you prefer.</p>' +
+        '<div style="display: flex; justify-content: space-between;">' +
+        '<div style="width: 70%;">' +
+        '<div id="optionA" class="option-container" style="border: 0px solid black; width: 100%; padding: 10px;">' +
+        '<img style="width: 80%;" src="' + optionAStimulus + '" />' +
+        '</div>' +
+        '<p style="text-align: center;"><b>Press F to choose the left option</b></p>' +
+        '</div>' +
+        '<div style="width: 70%;">' +
+        '<div id="optionB" class="option-container" style="border: 0px solid black; width: 100%; padding: 10px;">' +
+        '<img style="width: 80%;" src="' + optionBStimulus + '" />' +
+        '</div>' +
+        '<p style="text-align: center;"><b>Press J to choose the right option</b></p>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div style="margin-top: 20px; text-align: center; display: flex; flex-direction: column; align-items: center;">' +
+            '<div id="warningMessage" style="color: black; font-size: 30px; display: none; margin-bottom: 20px;">5 seconds left to make a decision</div>' +
+            '<button id="nextButton" style="display: none; color: black; font-size: 40px; align-self: center;" onclick="jsPsych.finishTrial()">Go to next trial</button>' +
+        '</div>'+
+        '</div>';
+},
+
+
+            choices: "NO_KEYS",
+            data: jsPsych.timelineVariable('data'),
+            trial_duration: null,
+            on_load: function() {
+                var originalStimulusHtml = jsPsych.getCurrentTrial().stimulus;
+                trialStartTime = Date.now();
+
+    // Start the countdown 5 seconds before the trial ends (35 seconds)
+    var countdownStart = 35000 - 5000; // Assuming trial duration is 35 seconds
+        timeout1 = setTimeout(function() {
+            var timeLeft = 5; // 5 seconds countdown
+            document.getElementById("warningMessage").style.color = "red"; // Change color to red
+            document.getElementById("warningMessage").style.display = "block";
+            document.getElementById("warningMessage").textContent = timeLeft + " seconds left to make a decision";
+            var countdown = setInterval(function() {
+                timeLeft--;
+                document.getElementById("warningMessage").textContent = timeLeft + " seconds left to make a decision";
+                if (timeLeft <= 0) clearInterval(countdown);
+            }, 1000);
+            warningShown = true;
+        }, countdownStart);
+
+        timeout2 = setTimeout(function() {
+        var nextButton = document.getElementById("nextButton");
+        nextButton.style.display = "block";
+
+        // Remove key event listener to disable key responses
+        document.removeEventListener('keydown', handleKeyResponse);
+
+        // Click event listener for the next button
+        nextButton.onclick = function() {
+            // Calculate reaction time
+            var rt_noResponse = Date.now() - trialStartTime;
+
+            // Save the necessary data
+            var data = jsPsych.getCurrentTrial().data;
+            data.response = 0; // No response
+            data.rt_trial = rt_noResponse;
+            data.after_warning = 1; // After warning is true
+            data.feedback= originalStimulusHtml; // Use the original stimulus HTML
+
+            // Finish the trial
+            jsPsych.finishTrial(data);
+        };
+    }, 35000);
+
+    document.addEventListener('keydown', handleKeyResponse);
+},
+            on_finish: function(data) {
+            document.removeEventListener('keydown', handleKeyResponse);
+
+
+    // Add additional trial-specific data directly to the data object
+    var currentTrial = jsPsych.getCurrentTrial();
+    data.risk_index = currentTrial.risk_index;
+    data.optionA_Stimulus = currentTrial.optionA_Stimulus;
+    data.optionB_Stimulus = currentTrial.optionB_Stimulus;
+    data.trial_type_label = 'prac';
+        clearTimeout(timeout1);
+        clearTimeout(timeout2);
+        document.removeEventListener('keydown', handleKeyResponse);
+
+        var nextButton = document.getElementById("nextButton");
+    if (nextButton) {
+        nextButton.onclick = null;
+    }
+
+    // Reset the warningShown flag for the next trial
+    warningShown = false;
+
+
+    }
+            
+        };
+
+
+    var testtrial2 = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+    // Split and shuffle the stimuli
+    var stimuli = jsPsych.timelineVariable('stimulus', true).split(",");
+
+    // Randomly determine riskIndex
+    var riskIndex = (Math.random() < 0.5) ? 1 : -1;
+    
+    // Decide order of stimuli based on riskIndex
+    var optionAStimulus, optionBStimulus;
+    if (riskIndex === 1) {
+        optionAStimulus = stimuli[0].trim();
+        optionBStimulus = stimuli[1].trim();
+    } else {
+        optionAStimulus = stimuli[1].trim();
+        optionBStimulus = stimuli[0].trim();
+    }
+
+    jsPsych.getCurrentTrial().risk_index = riskIndex;
+    jsPsych.getCurrentTrial().optionA_Stimulus = optionAStimulus;
+    jsPsych.getCurrentTrial().optionB_Stimulus = optionBStimulus;
+
+    return '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">' +
+        '<div style="color:black;font-size:20px;line-height:1.5">' +
+        '<p>Please choose the option that you prefer.</p>' +
+        '<div style="display: flex; justify-content: space-between;">' +
+        '<div style="width: 70%;">' +
+        '<div id="optionA" class="option-container" style="border: 0px solid black; width: 100%; padding: 10px;">' +
+        '<img style="width: 80%;" src="' + optionAStimulus + '" />' +
+        '</div>' +
+        '<p style="text-align: center;"><b>Press F to choose the left option</b></p>' +
+        '</div>' +
+        '<div style="width: 70%;">' +
+        '<div id="optionB" class="option-container" style="border: 0px solid black; width: 100%; padding: 10px;">' +
+        '<img style="width: 80%;" src="' + optionBStimulus + '" />' +
+        '</div>' +
+        '<p style="text-align: center;"><b>Press J to choose the right option</b></p>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div style="margin-top: 20px; text-align: center; display: flex; flex-direction: column; align-items: center;">' +
+            '<div id="warningMessage" style="color: black; font-size: 30px; display: none; margin-bottom: 20px;">5 seconds left to make a decision</div>' +
+            '<button id="nextButton" style="display: none; color: black; font-size: 40px; align-self: center;" onclick="jsPsych.finishTrial()">Go to next trial</button>' +
+        '</div>'+
+        '</div>';
+},
+
+
+            choices: "NO_KEYS",
+            data: jsPsych.timelineVariable('data'),
+            trial_duration: null,
+            on_load: function() {
+                var originalStimulusHtml = jsPsych.getCurrentTrial().stimulus;
+                trialStartTime = Date.now();
+
+    // Start the countdown 5 seconds before the trial ends (35 seconds)
+    var countdownStart = 35000 - 5000; // Assuming trial duration is 35 seconds
+        timeout1 = setTimeout(function() {
+            var timeLeft = 5; // 5 seconds countdown
+            document.getElementById("warningMessage").style.color = "red"; // Change color to red
+            document.getElementById("warningMessage").style.display = "block";
+            document.getElementById("warningMessage").textContent = timeLeft + " seconds left to make a decision";
+            var countdown = setInterval(function() {
+                timeLeft--;
+                document.getElementById("warningMessage").textContent = timeLeft + " seconds left to make a decision";
+                if (timeLeft <= 0) clearInterval(countdown);
+            }, 1000);
+            warningShown = true;
+        }, countdownStart);
+
+        timeout2 = setTimeout(function() {
+        var nextButton = document.getElementById("nextButton");
+        nextButton.style.display = "block";
+
+        // Remove key event listener to disable key responses
+        document.removeEventListener('keydown', handleKeyResponse);
+
+        // Click event listener for the next button
+        nextButton.onclick = function() {
+            // Calculate reaction time
+            var rt_noResponse = Date.now() - trialStartTime;
+
+            // Save the necessary data
+            var data = jsPsych.getCurrentTrial().data;
+            data.response = 0; // No response
+            data.rt_trial = rt_noResponse;
+            data.after_warning = 1; // After warning is true
+            data.feedback= originalStimulusHtml; // Use the original stimulus HTML
+
+            // Finish the trial
+            jsPsych.finishTrial(data);
+        };
+    }, 35000);
+
+    document.addEventListener('keydown', handleKeyResponse);
+},
+            on_finish: function(data) {
+            document.removeEventListener('keydown', handleKeyResponse);
+
+
+    // Add additional trial-specific data directly to the data object
+    var currentTrial = jsPsych.getCurrentTrial();
+    data.risk_index = currentTrial.risk_index;
+    data.optionA_Stimulus = currentTrial.optionA_Stimulus;
+    data.optionB_Stimulus = currentTrial.optionB_Stimulus;
+    data.trial_type_label = 'test';
+        clearTimeout(timeout1);
+        clearTimeout(timeout2);
+        document.removeEventListener('keydown', handleKeyResponse);
+
+        var nextButton = document.getElementById("nextButton");
+    if (nextButton) {
+        nextButton.onclick = null;
+    }
+
+    // Reset the warningShown flag for the next trial
+    warningShown = false;
+
+
+    }
+            
+        };
+
+
+    var BNT1 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: 
+        '<div style="width: 70%; margin: auto; border: 2px solid black; padding: 20px;">' +
+        '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Test 1: Question 1 of 4</b></div>' + // Center aligned
+        '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Instructions</b>: Please answer the questions below. Do not use a calculator.</div>' + // Center aligned
+        '<div style="color:black;font-size:25px;line-height:1.5; text-align: left; margin-bottom:20px"><b> Imagine we are throwing a five-sided die 50 times. On average, out of these 50 throws how many times would this five-sided die show an odd number (1, 3 or 5)</b></div>' +
+        '</div>',
+        
+        choices: ['5 out of 50 throws', '25 out of 50 throws', '30 out of 50 throws', 'None of the above'],
+        button_html: '<button class="jspsych-btn" style="font-size: 23px; padding: 20px 30px; margin-top: 20px;">%choice%</button>', // Increase button size  
+        post_trial_gap: 800,
+        on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'BNT', BNT1_answer: data.response});
+        }
+        };
+
+        var BNT2 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="width: 70%; margin: auto; border: 2px solid black; padding: 20px;">' +  // Added wrapper <div> with styles
+        '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Test 1: Question 2 of 4</b></div>' + // Center aligned
+        '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Instructions</b>: Please answer the questions below. Do not use a calculator.</div>' + // Center aligned
+        '<div style="color:black;font-size:25px;line-height:1.5; text-align: left;"><b></b></div>' +
+        '<div style="color:black;font-size:25px;line-height:1.5; text-align: left; margin-bottom:20px"><b> Out of 1,000 people in a small town 500 are members of a choir. Out of these 500 members in the choir 100 are men. Out of the 500 inhabitants that are not in the choir 300 are men. What is the probability that a randomly drawn man is a member of the choir? Please indicate the probability in percent</b></div>' +
+        '</div>',  // End of wrapper <div>
+        choices: ['10%', '25%', '40%', 'None of the above'],
+        button_html: '<button class="jspsych-btn" style="font-size: 23px; padding: 20px 30px; margin-top: 20px;">%choice%</button>', // Increase button size and added margin-top
+        post_trial_gap: 800,
+        on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'BNT', BNT2_answer: data.response});
+        }
+    };
+
+
+    
+    var BNT3 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="width: 70%; margin: auto; border: 2px solid black; padding: 20px;">' +
+            '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Test 1: Question 3 of 4</b></div>' + // Center aligned
+        '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Instructions</b>: Please answer the questions below. Do not use a calculator.</div>' + // Center aligned
+        '<div style="color:black;font-size:25px;line-height:1.5; text-align: left; margin-bottom:20px"><b> Imagine we are throwing a loaded die (6 sides). The probability that the die shows a 6 is twice as high as the probability of each of the other numbers. On average, out of these 70 throws, about how many times would the die show the number 6?</b></div>' +
+        '</div>',
+        choices: ['20 out of 70 throws', '23 out of 70 throws', '35 out of 70 throws', 'None of the above'],
+        button_html: '<button class="jspsych-btn" style="font-size: 23px; padding: 20px 30px; margin-top: 20px;">%choice%</button>', // Increase button size 
+        post_trial_gap: 800,
+        on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'BNT', BNT3_answer: data.response});
+        } 
+    };
+
+    var BNT4 = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: '<div style="width: 70%; margin: auto; border: 2px solid black; padding: 20px;">' +
+            '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Test 1: Question 4 of 4</b></div>' + // Center aligned
+        '<div style="color:black;font-size:28px;line-height:1.5;margin-bottom:25px; text-align: center;"><b>Instructions</b>: Please answer the questions below. Do not use a calculator.</div>' + // Center aligned
+        '<div style="color:black;font-size:25px;line-height:1.5; text-align: left; margin-bottom:20px"><b> In a forest 20% of mushrooms are red, 50% brown and 30% white. A red mushroom is poisonous with a probability of 20%. A mushroom that is not red is poisonous with a probability of 5%. What is the probability that a poisonous mushroom in the forest is red?</b></div>' +
+        '</div>',
+
+
+                    choices: ['4 %', '20 %', '50 %', 'None of the above'],
+        button_html: '<button class="jspsych-btn" style="font-size: 23px; padding: 20px 30px; margin-top: 20px;">%choice%</button>', // Increase button size
+        post_trial_gap: 800,
+        on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'BNT', BNT4_answer: data.response});
+        }   
+    };
+
+    const correctBNT = {
+    BNT1: 2,  
+    BNT2: 1,  
+    BNT3: 0,  
+    BNT4: 2                   
+    };
+
+    var persentAccuracyTrial = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: '',  
+    on_start: function(trial) {
+        let correctCount = 0;
+        let BNTresponses = jsPsych.data.get().filter({trial_type_label: 'BNT'}).values();
+
+        for (let i = 0; i < BNTresponses.length; i++) {
+            if (BNTresponses[i].response == correctBNT[`BNT${i+1}`]) {
+                correctCount++;
+            }
+        }
+        
+        let accuracy = (correctCount / 4)*100;
+        jsPsych.getCurrentTrial().BNT_accuracy = accuracy;
+
+        trial.stimulus = '<div style="width: 70%; margin: auto; border: 2px solid black; padding: 20px;font-size:30px;">'+
+            '<div>Your accuracy in this test is: ' + accuracy +'%.</div>'+
+            '<br>'+
+            '<div> Thus, your bonus payment for this test is: '+  accuracy + '% * 0.5$ = <b>' + (accuracy/100)*0.5+ ' $ </b></div> '+
+            '<br>'+
+            '</div>';  // Display accuracy to participant
+    },
+    choices: ['Continue'], 
+    on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'BNT_accuracy',
+            accuracy_BNT: jsPsych.getCurrentTrial().BNT_accuracy,
+            });
+        } 
+};
+
+
+
+
+
+    var shuffledsame = jsPsych.randomization.shuffleNoRepeats(stimuli_same)
+    var shuffleddiff = jsPsych.randomization.shuffleNoRepeats(stimuli_diff)
+
+
+
+
+
+
+
+        
+
+    /* define procedures */  
+
+    var prac_procedure = {
+          timeline: [practrial],
+          timeline_variables: pracStim,
+          randomize_order: true
+        }
+
+
+        var test_procedure3 = {
+          timeline: [testtrial2],
+          timeline_variables: shuffledsame,
+          randomize_order: false
+        }
+
+        var test_procedure4 = {
+          timeline: [testtrial2],
+          timeline_variables: shuffleddiff,
+          randomize_order: false
+        }
+        
+
+   
+
+    
+
+    
+
+    
+
+    
+
+    /* Define blocks */
+
+        let blk1 = {
+            timeline: jsPsych.randomization.shuffle([test_procedure3]),
+            repetitions: 1
+
+            };
+
+        let blk2 = {
+            timeline: jsPsych.randomization.shuffle([test_procedure4]),
+            repetitions: 1
+            };
+
+      
+            
+
+        
+
+    /* define Questionnaires */  
+    var Genderq = ["Male", "Female", "Non-binary", "Other", "prefer not to say"]; 
+    var edu = ["No formal education", "Primary school", "Secondary school up to 16 years", "Higher or secondary or further education (A-levels, BTEC, etc.)", "College or university", "Post-graduate degree","Prefer not to say"];
+
+    var demo_Age = {
+        type: jsPsychSurveyText,
+        questions: [
+        {prompt: '<p style="text-align: left;font-size:30px;">How old are you?</p>', columns: 3, required: true, name: 'Age'},
+        {prompt: '<p style="text-align: left;font-size:30px;">Do you have any feedback or comment for this online experiment?</p>', columns: 50, required: true, name: 'feedback'}
+
+    ],
+        randomize_question_order: false,
+        on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'demo'});
+        }
+        };
+
+    var Demographics = {
+        type: jsPsychSurveyMultiChoice,
+        questions: [
+            {prompt: '<p style="text-align: left;font-size:30px;">What is your Gender?</p>', options: Genderq, required: true, horizontal: true,},
+            {prompt: '<p style="text-align: left;font-size:30px;">What is the highest degree or level of school you have completed?</p>', options: edu, required: true, horizontal: false,}, 
+            ],
+        randomize_question_order: true,
+        on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'demo'});
+        }
+        
+        };
+
+    
+
+
+
+// Experiment Flow */  
+      timeline.push(prac_procedure);
+      timeline.push(practiceEnd);
+
+      
+      let blocks = [blk1, blk2];
+      blocks = jsPsych.randomization.shuffle(blocks);
+
+      // Check which block comes first and merge accordingly
+        var mergedArray;
+
+        if (blocks[0] === blk1) {
+        // If blk1 is first, shuffledsame should come first
+        mergedArray = shuffledsame.concat(shuffleddiff);
+        } else {
+        // If blk2 is first, shuffleddiff should come first
+        mergedArray = shuffleddiff.concat(shuffledsame);
+        }
+
+    
+
+      
+
+
+      
+        timeline.push(blocks[0]);
+        timeline.push(betweenTrials1);
+
+        timeline.push(blocks[1]);
+        timeline.push(finalTrials);
+        timeline.push(beforecogtest1);
+        timeline.push(BNT1);
+        timeline.push(BNT2);
+        timeline.push(BNT3);
+        timeline.push(BNT4);
+        timeline.push(persentAccuracyTrial);
+        
+        timeline.push(beforecogtest2);
+
+
+        function createHMTexample1() {
+    return `
+    <div style="width: 70%; margin: auto; border: 2px solid black; padding: 20px;">
+
+        <div style="color:black;font-size:30px;line-height:1"><b>Test 2 Intruction</b></div>
+        <div style="text-align: left;">
+        
+            <p>This test is about finding rules in abstract patterns and to complete them in a logical way. Each task shows an incomplete figure. 
+            The patterns you will see follow rules which may apply to a row, a column or to a diagonal. They may apply to the figure as a whole or to parts of it only.</p>
+            <p>They may involve addition, subtraction, the alignment of figures or single components. Only one of the six pieces is the correct one required to complete the design.
+            It is your task to select the piece, which completes the figure. </p>
+            <p>You will be presented 6 tasks. <b>Each task needs to be completed within 2:00 minutes. The next task will be shown automatically after the two-minute period has elapsed. You will see a timer showing how much time is left.</b></p>
+            <p><b>Good luck!</p></b>
+            
+            
+            
+        </div>
+        </div>
+        <div style="color:black;font-size:30px;line-height:1.5"><p><b>You will see two examples before the test.</b></p>
+            
+        </div>
+        
+        
+        
+
+        <div style="text-align: center;">
+        </div>
+    </div>
+    `;
+}
+
+function createHMTexample2() {
+    return `
+    <div style="width: 80%; margin: auto; border: 2px solid black; padding: 20px;">
+
+        
+        <div style="color:black;font-size:30px;line-height:1.5"><p><b>Example 1</b></p>
+            <p><b>Which piece is the one required to complete the design?</b></p>
+        </div>
+        
+        
+        <div style="text-align: center;">
+            <!-- Description and big image go here -->
+            <div style="margin-bottom: 20px;">
+                <img src="ques_prac/Example1br.png" style="width: 300px;">
+            </div>
+            <!-- Six smaller images with buttons go here -->
+            <div style="display: flex; justify-content: center;">
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example1_Sol_1br.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example1_Sol_2r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example1_Sol_3r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example1_Sol_4r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example1_Sol_5r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example1_Sol_6r.png" style="width: 100px;">
+                    
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+        <p>The correct answer is option 1. The rule which defines the figure is: The line and the black rectangle systematically vary: the line move clockwise in each row and the black rectangle move clockwise in each column and row, i.e. it has to be situated in the center of the lower part in the missing piece.</p>
+        <p> If you fully understand, press "Continue" to see the next example. </p>
+        </div>
+    `;
+}
+
+function createHMTexample3() {
+    return `
+    <div style="width: 80%; margin: auto; border: 2px solid black; padding: 20px;">
+
+        
+        <div style="color:black;font-size:30px;line-height:1.5"><p><b>Example 2</b></p>
+            <p><b>Which piece is the one required to complete the design?</b></p>
+        </div>
+        
+        
+        <div style="text-align: center;">
+            <!-- Description and big image go here -->
+            <div style="margin-bottom: 20px;">
+                <img src="ques_prac/Example2r.png" style="width: 300px;">
+            </div>
+            <!-- Six smaller images with buttons go here -->
+            <div style="display: flex; justify-content: center;">
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example2_Sol_1r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example2_Sol_2r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example2_Sol_3r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example2_Sol_4br.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example2_Sol_5r.png" style="width: 100px;">
+                    
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/Example2_Sol_6r.png" style="width: 100px;">
+                    
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+        <p>The fourth piece is the only correct solution. In the task subtracting elements from each other was required. The elements in the second position have to be subtracted from the elements in the first column, i.e. in the third column those elements need to be present which are situated in the first column, but not in the second one. The square frame is not considered for the subtraction and remains intact.</p>
+        <p><b> If you fully understand, press "Continue" to start the test.</b> </p>
+        </div>
+    `;
+}
+
+
+
+
+
+            
+
+function createHMTContent(trialnumber, correctOption) {
+        const prefix = `M0${trialnumber}`;
+    return `
+        <div style="text-align: center;">
+            <!-- Timer goes here -->
+            <div id="timer" style="font-size: 24px; margin-bottom: 20px;">Time remaining: 02:00</div>
+            
+
+
+            <!-- Big image goes here -->
+            <div style="margin-bottom: 20px;">
+               
+                <img src="ques_prac/${prefix}r.png" style="width: 300px;">
+            </div>
+
+            <!-- Six smaller images with buttons go here -->
+            <div style="display: flex; justify-content: space-between;">
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/${prefix}_Sol_1r.png" style="width: 150px;">
+                    <div><button class="jspsych-btn" data-correct="${correctOption === 1}" onclick="recordResponse(1, ${trialnumber})">Option 1</button></div>
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/${prefix}_Sol_2r.png" style="width: 150px;">
+                    <div><button class="jspsych-btn" data-correct="${correctOption === 2}" onclick="recordResponse(2, ${trialnumber})">Option 2</button></div>
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/${prefix}_Sol_3r.png" style="width: 150px;">
+                    <div><button class="jspsych-btn" data-correct="${correctOption === 3}" onclick="recordResponse(3, ${trialnumber})">Option 3</button></div>
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/${prefix}_Sol_4r.png" style="width: 150px;">
+                    <div><button class="jspsych-btn" data-correct="${correctOption === 4}" onclick="recordResponse(4, ${trialnumber})">Option 4</button></div>
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/${prefix}_Sol_5r.png" style="width: 150px;">
+                    <div><button class="jspsych-btn" data-correct="${correctOption === 5}" onclick="recordResponse(5, ${trialnumber})">Option 5</button></div>
+                </div>
+                <div style="margin: 0 10px;">
+                    <img src="ques_prac/${prefix}_Sol_6r.png" style="width: 150px;">
+                    <div><button class="jspsych-btn" data-correct="${correctOption === 6}" onclick="recordResponse(6, ${trialnumber})">Option 6</button></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
+    // Initialize variable to store responses
+    let HMTresponse = [];
+
+    // Record the user's response and end the trial
+    function recordResponse(option, trialNumber) {
+        const correct = option === correctAnswers[trialNumber - 1]; // Adjust as per your indexing
+        HMTresponse.push({ trialNumber, option, correct });
+        jsPsych.finishTrial({ option });
+    }
+
+    // Array to hold the correct answers for each trial (1-indexed)
+    const correctAnswers = [6, 4, 1, 3, 5, 6]; // Replace these with the correct options for each trial
+
+    function createHMTTrial(trialNumber) {
+    let intervalId;  // ID of the timer interval
+
+    return {
+        type: jsPsychHtmlButtonResponse,  // Make sure to have the correct plugin type here
+        stimulus: createHMTContent(trialNumber, correctAnswers[trialNumber - 1]),
+        choices: [], // We handle choices via custom buttons in the HTML
+        post_trial_gap: 300,
+        on_load: function() {
+            // Initialize timer
+            let timeLeft = 120;  // Time in seconds
+            intervalId = setInterval(function() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                document.getElementById('timer').innerText = `Time remaining: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(intervalId);
+                    jsPsych.finishTrial();
+                }
+
+                timeLeft -= 1;
+            }, 1000);
+        },
+        on_finish: function(data) {
+            clearInterval(intervalId);  // Clear the timer
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'HMT'});
+        }
+    };
+}
+
+
+
+    // Create a single HMT trial
+    const hmtexample1 = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: createHMTexample1,
+    choices: ['Continue'] 
+    };
+    const hmtexample2 = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: createHMTexample2,
+    choices: ['Continue'] 
+    };
+    const hmtexample3 = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: createHMTexample3,
+    choices: ['Continue'] 
+    };
+
+
+
+
+
+
+    // Create a single HMT trial
+    const hmtTrial = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: createHMTContent,
+    choices: [], 
+    
+    };
+
+    function roundToDecimalPlaces(value, places) {
+        const multiplier = Math.pow(10, places);
+        return Math.round(value * multiplier) / multiplier;
+    }
+
+
+    var persentAccuracyHMT = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: '',  
+    on_start: function(trial) {
+        let correctCount = 0;
+        let HMTresponses = jsPsych.data.get().filter({trial_type_label: 'HMT'}).values();
+
+        for (let i = 0; i < HMTresponses.length; i++) {
+            if (HMTresponses[i].option == correctAnswers[i]) {
+                correctCount++;
+            }
+        }
+        
+        let accuracy = roundToDecimalPlaces((correctCount / 6) * 100, 0);
+        
+        jsPsych.getCurrentTrial().HMT_accuracy = accuracy;
+
+        trial.stimulus = '<div style="width: 70%; margin: auto; border: 2px solid black; padding: 20px;font-size:30px;">'+
+            '<br>'+
+            '<div>Your accuracy in this test is: ' + accuracy +'%.</div>'+
+            '<br>'+
+            '<div> Thus, your bonus payment for this test is: '+  accuracy + '% * 0.5$ = <b>' + roundToDecimalPlaces((accuracy/100)*0.5, 2)+ ' $ </b></div> '+
+            '</div>';  // Display accuracy to participant
+    },
+    choices: ['Continue'], 
+    on_finish: function(data) {
+            jsPsych.data.addDataToLastTrial({trial_type_label: 'HMT_accuracy',
+            accuracy_HMT: jsPsych.getCurrentTrial().HMT_accuracy});
+        } 
+};
+
+    // Creating the four trials
+    const hmtTrial1 = createHMTTrial(1);
+    const hmtTrial2 = createHMTTrial(2);
+    const hmtTrial3 = createHMTTrial(3);
+    const hmtTrial5 = createHMTTrial(5);
+    const hmtTrial7 = createHMTTrial(7);
+    const hmtTrial9 = createHMTTrial(9);
+
+    hmttimeline = [hmtTrial1, hmtTrial2, hmtTrial3,  hmtTrial5,  hmtTrial7, hmtTrial9];
+    timeline.push(hmtexample1);
+    timeline.push(hmtexample2);
+    timeline.push(hmtexample3);
+    // Create a randomized timeline
+    timeline.push(hmttimeline[0]);
+    timeline.push(hmttimeline[1]);
+    timeline.push(hmttimeline[2]);
+    timeline.push(hmttimeline[3]);
+    timeline.push(hmttimeline[4]);
+    timeline.push(hmttimeline[5]);
+    timeline.push(persentAccuracyHMT);
+    timeline.push(beforecogtest3);
+
+
+
+        
+
+
+
+        timeline.push(Demographics);
+        timeline.push(demo_Age);
+        
+        
+        
+
+
+    var beforebonus = {
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '<div style="color:black;font-size:25px;line-height:1.5"><b>Time For Bonus Payment!</b></div>' +
+          '<div style="color:black;font-size:25px;line-height:1.5">In next page one trial will be selected.</div>' +
+          '<div style="color:black;font-size:25px;line-height:1.5">Your bonus payment will be decided by the selected trial.</div>'+
+          '<div style="color:black;font-size:25px;line-height:1.5">Press any key to continue.</div>',
+          key_forward: 'rightarrow',
+          post_trial_gap: 1000,
+          
+        };
+
+    var selectedPay;
+
+    /* define debrief */
+    var debrief_block = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: function() {
+
+        function roundToDecimalPlaces(value, places) {
+        const multiplier = Math.pow(10, places);
+        return Math.round(value * multiplier) / multiplier;
+        }
+
+        var allTrials = jsPsych.data.get().values();
+        var filteredTrials = [];
+
+        allTrials.forEach(function(trial) {
+            // Check if the trial_type_label and response exist and meet the criteria
+            if (trial.hasOwnProperty('trial_type_label') && trial.trial_type_label === 'test') {
+                // Add the trial to the filtered list
+                filteredTrials.push(trial);
+            }
+        });
+
+        console.log("Filtered trials:", filteredTrials);
+
+
+
+        var Bonus_BNT = jsPsych.data.get().filter({trial_type_label: 'BNT_accuracy'}).values()[0];
+        var Bonus_HMT = jsPsych.data.get().filter({trial_type_label: 'HMT_accuracy'}).values()[0];
+        var Bonus_BNT_1 = Bonus_BNT.accuracy_BNT;
+        var Bonus_HMT_1 = Bonus_HMT.accuracy_HMT;
+
+
+        // Calculate a random index based on the length of the filteredTrials array
+        var random_trial_index = Math.floor(Math.random() * filteredTrials.length);
+        console.log("trial index:", random_trial_index);
+
+        // Use the random index to get a trial from the filteredTrials array
+        var random_trial = filteredTrials[random_trial_index];
+
+        var random_trial_response = random_trial.response;
+        var random_trial_stimulus_after = random_trial.feedback;
+        // Get the identifiers from the random_trial object
+        var optionA_Stimulus = random_trial.optionA_Stimulus;
+        var optionB_Stimulus = random_trial.optionB_Stimulus;
+
+        // Find the corresponding trial in the original array
+        var original_trial = mergedArray.find(trial => {
+            return trial.stimulus.includes(optionA_Stimulus) && trial.stimulus.includes(optionB_Stimulus);
+        });
+
+        var risk_index2 = random_trial.risk_index;
+        var random_trial_response2 = random_trial_response;
+
+        
+
+        // Check if the response is '0'
+        if (random_trial_response === 0) {
+            selectedPay = 0;  // Set selectedPay to 0
+            var totalbonus = roundToDecimalPlaces((Bonus_BNT_1 * 0.5*0.01 + Bonus_HMT_1 * 0.5*0.01),2);
+            jsPsych.getCurrentTrial().total_bonus = totalbonus;
+            return `
+                <p><b>This is the selected trial.</b></p>   
+                <p>${random_trial_stimulus_after}</p>
+                <p>Your choice was: <b>Not Available (no response)</b></p>
+                <p>As there was no response, the selected pay is 0 $</p>
+                <div style="color:black;font-size:30px;"><p><b>The total bonus payment is:  </b></p></div>
+                <div style="color:black;font-size:30px;"><p><b>${roundToDecimalPlaces((Bonus_BNT_1 * 0.5*0.01),2)} $ (first test) + ${roundToDecimalPlaces((Bonus_HMT_1 * 0.5*0.01),2)} $ (second test) + 0 $ = ${totalbonus} $ </b></p></div>
+
+            `;
+        }
+
+        
+
+
+
+        if (risk_index2 === -1) {
+            if (random_trial_response2 === 'f') {
+                random_trial_response2 = 'j';
+            } else if (random_trial_response2 === 'j') {
+                random_trial_response2 = 'f';
+            }
+        }
+    
+        var random_trial_stimulus_after = random_trial.feedback;
+        
+        const randomValue = Math.floor(Math.random() * 101); // Generate a random number between 0 and 1
+
+        function calculateSelectedPay(outcomes, response) {
+            const randomValue = Math.floor(Math.random() * 101);
+            let cumulativeProb = 0;
+
+            for (let i = 1; i <= 7; i++) {
+                let probKey = response === 'f' ? `probA${i}` : `probB${i}`;
+                let payKey = response === 'f' ? `payA${i}` : `payB${i}`;
+                
+                if (outcomes[probKey]) {
+                    cumulativeProb += outcomes[probKey];
+                    if (randomValue < cumulativeProb) {
+                        return outcomes[payKey];
+                    }
+                }
+            }
+            return 0;
+        }
+
+        var selectedPay = calculateSelectedPay(original_trial[random_trial_response2 === 'f' ? 'F' : 'J'], random_trial_response2);
+
+        var totalbonus = roundToDecimalPlaces((Bonus_BNT_1 * 0.5*0.01 + Bonus_HMT_1 * 0.5*0.01 + selectedPay*0.01),2);
+            jsPsych.getCurrentTrial().total_bonus = totalbonus;
+
+
+      
+
+
+        return `
+                <p><b>This is the selected trial.</b></p>   
+                <p>${random_trial_stimulus_after}</p>
+                <p>Your choice was: ${random_trial_response === 'f' ? '<b>The left option</b>' : '<b>The right option</b>'}</p>
+                <p>Based on the probabilities, the randomly selected outcome is: ${selectedPay} $ </p>
+                <div style="color:black;font-size:25px;"><p><b>Your bonus payment is: ${selectedPay} * 1% = ${roundToDecimalPlaces(selectedPay*0.01, 2)} $</b></p></div>
+                <div style="color:black;font-size:30px;"><p><b>The total bonus payment is:  </b></p></div>
+                <div style="color:black;font-size:30px;"><p><b>${roundToDecimalPlaces((Bonus_BNT_1 * 0.5*0.01),2)} $ (first test) + ${roundToDecimalPlaces((Bonus_HMT_1 * 0.5*0.01),2)} $ (second test) + ${roundToDecimalPlaces(selectedPay*0.01, 2)} $ = ${totalbonus} $ </b></p></div>
+
+                   `;
+
+  
+      },
+
+      choices: ['Continue'],
+      on_finish: function(data) { 
+
+        jsPsych.data.addDataToLastTrial({trial_type_label: 'Bonus_decision',
+        total_bonus: jsPsych.getCurrentTrial().total_bonus,
+    
+    });
+
+        data.Bonus_pay = selectedPay*0.02;
+  }
+      
+    };
+
+    var debriefing = '<div style="border: 1px solid #ccc; padding: 20px; border-radius: 10px; background-color: #d7d7d7; width: 90%; margin: 0 auto; font-size: 15px; text-align: left;">'+
+        '<h1>Debriefing</h1>'+
+        '<p>Dear Participants,</p>'+
+        '<p>Thank you for your participation in our research study on decision-making and complexity. The aim of this study was to investigate how different forms of complexity influence individuals\' risky choices. We appreciate your time and effort in completing the tasks and contributing to our research.</p>'+
+        '<p>As individuals, we face numerous decisions in our daily lives. However, the overwhelming amount of information we must process often hinders our ability to make optimal choices. We tend to avoid complex options and prefer simpler and more intuitive alternatives, even if they may not be superior. This tendency to be "cognitive misers" influences our decision-making processes.</p>'+
+        '<p>Previous research has examined the impact of complexity on decision-making, primarily focusing on the number of alternatives or features as indicators of complexity. However, there are other types of complexity, understanding how different types of complexity influence decision-making is crucial in comprehending the cognitive processes involved.</p>'+
+        '<p>Therefore, we included several different manipulations in this study. For example, the complex lotteries you have seen before.  We hope that we can find the effect of complexity on your risky choices.</p>'+
+        '<p>Thank you once again for your participation in this study. Your involvement has contributed to our understanding of decision-making processes under the influence of complexity. Should you have any further questions or would like to receive a summary of the study\'s findings, please do not hesitate to contact us at maohua.nie@unibas.ch. Your valuable contribution is greatly appreciated.</p>'
+        '</div>';
+
+    var afterbonus = {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: debriefing,
+          choices: ['Continue'],
+          
+        };
+
+    timeline.push(beforebonus);
+    timeline.push(debrief_block);
+    timeline.push(afterbonus);
+
+    /* start the experiment */
+    jatos.onLoad(() => {
+        jsPsych.run(timeline);
+    });
+ 
+
+  </script>
+</html>
