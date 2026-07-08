@@ -31,6 +31,3 @@ pdflatex supplementary   # a second pass populates the table of contents + cross
 Requires a TeX distribution with `apa7`, `biblatex`, `biber`, and the usual
 packages (`booktabs`, `tabularx`, `threeparttable`, `hyperref`, `pdflscape`, …).
 
-The compiled `supplementary.pdf` is not bundled (it would go stale); build it from
-this source. See ../README.md for the analysis pipeline that produces the figures
-and results reported here.
